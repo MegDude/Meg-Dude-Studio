@@ -439,7 +439,6 @@ const App: React.FC = () => {
  image: dataURLtoFile(obj.imageBase64, `loaded-object-${Date.now()}.jpeg`)
  }));
  setPlacedObjects(loadedObjects);
- alert('Workspace Restored. Continue where you left off.');
  }
  }
  } catch (err) {
