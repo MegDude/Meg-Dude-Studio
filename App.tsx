@@ -5,7 +5,7 @@ import { suggestMatchingItems } from './src/services/matchingService';
  * SPDX-License-Identifier: Apache-2.0
 */
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { generateCompositeImage, stageRoomImage } from './src/services/geminiService';
 import { Product } from './types';
 import Header from './components/Header';
@@ -19,7 +19,7 @@ import MeasureOverlay from './components/MeasureOverlay';
 import BeforeAfterModal from './components/BeforeAfterModal';
 import { generateMultiCompositeImage, editProductBackground } from './src/services/geminiService';
 import { ImageWithFallback } from './components/ImageWithFallback';
-import { Ruler } from 'lucide-react';
+import { Ruler, Wand2 } from 'lucide-react';
 
 type PlacedObjectState = {
  id: string;
@@ -104,6 +104,25 @@ const loadingMessages = [
 
 type AppMode = 'placement' | 'staging' | 'moodboard';
 type DesignActionMode = 'add' | 'remove';
+
+const DesignStepGuide: React.FC<{ activeStep: 1 | 2 | 3 }> = ({ activeStep }) => {
+ const steps = [
+ { number: 1, label: 'Add room scene' },
+ { number: 2, label: 'Add products' },
+ { number: 3, label: 'Move and generate' },
+ ] as const;
+
+ return (
+ <div className="ic-step-guide" aria-label="Design workflow steps">
+ {steps.map((step) => (
+ <div key={step.number} className={`ic-step-item ${activeStep === step.number ? 'is-active' : ''}`}>
+ <span className="ic-step-number">{step.number}</span>
+ <span>{step.label}</span>
+ </div>
+ ))}
+ </div>
+ );
+};
 
 type WorkspaceControlBarProps = {
  appMode: AppMode;
@@ -236,7 +255,7 @@ const App: React.FC = () => {
  const [touchOrbPosition, setTouchOrbPosition] = useState<{x: number, y: number} | null>(null);
  const sceneImgRef = useRef<HTMLImageElement>(null);
  
- const sceneImageUrl = sceneImage ? URL.createObjectURL(sceneImage) : null;
+ const sceneImageUrl = useMemo(() => sceneImage ? URL.createObjectURL(sceneImage) : null, [sceneImage]);
  const productImageUrl = selectedProduct ? selectedProduct.imageUrl : null;
 
  
@@ -1117,6 +1136,7 @@ Return only the cleaned final room image.
  if (!sceneImage) {
  return (
  <div className="w-full max-w-4xl mx-auto animate-fade-in flex flex-col gap-5">
+ <DesignStepGuide activeStep={1} />
  <div className="ic-workflow-panel flex flex-col">
  <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-4 text-navy-900 dp-editorial-headline">Start With The <span className="text-[#C8A96A]">Room Scene</span></h2>
  <ImageUploader 
@@ -1152,6 +1172,7 @@ Return only the cleaned final room image.
  if (sceneImage && designActionMode === 'remove') {
  return (
  <div className="w-full max-w-5xl mx-auto animate-fade-in flex flex-col gap-5">
+ <DesignStepGuide activeStep={3} />
  <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-1 text-navy-900 dp-editorial-headline">Edit This <span className="text-[#C8A96A]">Room Scene</span></h2>
  <ImageUploader 
  ref={sceneImgRef}
@@ -1217,9 +1238,10 @@ Return only the cleaned final room image.
  );
  }
 
- if (sceneImage && designActionMode === 'add' && !productImageFile) {
+ if (sceneImage && designActionMode === 'add' && !productImageFile && placedObjects.length === 0) {
  return (
  <div className="w-full max-w-5xl mx-auto animate-fade-in flex flex-col gap-5">
+ <DesignStepGuide activeStep={2} />
  <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-1 text-navy-900 dp-editorial-headline">Edit This <span className="text-[#C8A96A]">Room Scene</span></h2>
  <ImageUploader 
  id="scene-uploader-add-product"
@@ -1248,6 +1270,7 @@ Return only the cleaned final room image.
  </button>
  </div>
  <h2 className="dp-editorial-headline font-medium text-2xl text-center mb-1 text-navy-900 dp-editorial-headline">Select Furniture <span className="text-[#C8A96A]">To Add</span></h2>
+ <p className="dp-soft text-center text-sm">Upload a product or choose one from the library. You can drag it around the room before generating.</p>
  <ImageUploader 
  id="product-uploader"
  onFileSelect={handleProductImageUpload}
@@ -1282,7 +1305,7 @@ Return only the cleaned final room image.
  />
  </div>
  )}
- {renderLibraryGrid(DESIGN_ROOM_LIBRARY, 'design-room', 'Room Scene Library')}
+ {renderLibraryGrid(DESIGN_ROOM_LIBRARY, 'design-room', 'Mood Studio Room Library')}
  
  <div className="w-full flex flex-col md:flex-row gap-5 md:gap-8">
  {/* Left side: Product Selection */}
@@ -1385,10 +1408,12 @@ Return only the cleaned final room image.
 
  return (
  <div className="w-full max-w-7xl mx-auto animate-fade-in">
+ <DesignStepGuide activeStep={3} />
  <div className="flex flex-col lg:flex-row gap-5 lg:gap-7 items-start">
  {/* Scene Column */}
  <div className="w-full lg:w-2/3 flex flex-col order-1 pb-5">
  <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-5 text-navy-900 dp-editorial-headline">Your Room <span className="text-[#C8A96A]">Preview</span></h2>
+ <p className="dp-soft text-center text-sm mb-3">Drag or tap the room to move the product into position, then generate the new scene.</p>
  <div className="flex-grow flex flex-col items-center justify-center relative w-full">
   <ImageUploader 
  ref={sceneImgRef}
@@ -1479,6 +1504,7 @@ Return only the cleaned final room image.
  {/* Right Sidebar */}
  <div className="w-full lg:w-1/3 flex flex-col order-2 lg:sticky lg:top-[120px] gap-5 pb-5">
  {/* Product Column */}
+ {selectedProduct && (
  <div className="ic-selected-item-panel w-full flex flex-col dp-panel p-4">
  <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-5 text-navy-900 dp-editorial-headline">Your Selected <span className="text-[#C8A96A]">Item</span></h2>
  <div className="flex-grow flex items-center justify-center">
@@ -1505,6 +1531,7 @@ Return only the cleaned final room image.
  </button>
  </div>
  </div>
+ )}
 
  {/* Items In Room Column */}
  <div className="w-full flex flex-col">
@@ -1524,15 +1551,15 @@ Return only the cleaned final room image.
  className="ic-layer-card bg-white p-3 dp-radius border border-navy-100 flex flex-col gap-3 animate-fade-in hover:border-navy-200 transition-colors cursor-move"
  style={{ animationDuration: '0.3s' }}
  >
- <div className="flex items-center gap-3 w-full">
- <div className="text-navy-300 hover:text-navy-400 transition-colors">
+ <div className="ic-layer-card-row flex items-center gap-3 w-full min-w-0">
+ <div className="ic-layer-handle text-navy-300 hover:text-navy-400 transition-colors flex-shrink-0">
  <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24"><path d="M8 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM8 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 6a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0zM20 18a2 2 0 1 1-4 0 2 2 0 0 1 4 0z" /></svg>
  </div>
- <ImageWithFallback src={obj.thumbnailUrl} productName={obj.name || "Object"} productId={obj.id} className="w-12 h-12 object-cover dp-radius" alt={obj.name || "Object"} />
- <div className="flex-grow flex flex-col">
+ <ImageWithFallback src={obj.thumbnailUrl} productName={obj.name || "Object"} productId={obj.id} className="w-12 h-12 object-cover dp-radius flex-shrink-0" alt={obj.name || "Object"} />
+ <div className="min-w-0 flex-1 flex flex-col">
  <span className="text-sm font-semibold text-navy-900 truncate">{obj.name || "Object"}</span>
  </div>
- <div className="flex items-center gap-1">
+ <div className="ic-layer-actions flex items-center gap-1 flex-shrink-0">
  
   <button 
     onClick={() => setEditingProductBgId(obj.id)}

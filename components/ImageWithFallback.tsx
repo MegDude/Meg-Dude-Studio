@@ -20,16 +20,12 @@ export const ImageWithFallback: React.FC<ImageWithFallbackProps> = ({ src, produ
     }, [optimizedUrl]);
 
     const handleError = () => {
-        if (imgSrc !== '/images/interior-inventory/placeholder.jpg') {
-            if (imgSrc === optimizedUrl && !optimizedUrl.includes('placeholder')) {
-                 setImgSrc(`/images/interior-inventory/manual-uploads/${id}.jpg`);
-            } else if (imgSrc.includes('manual-uploads')) {
-                 setImgSrc('/images/interior-inventory/placeholder.jpg');
-            }
+        if (imgSrc !== 'placeholder') {
+            setImgSrc('placeholder');
         }
     };
 
-    if (imgSrc === '/images/interior-inventory/placeholder.jpg') {
+    if (imgSrc === 'placeholder') {
         return (
             <div className={`flex flex-col items-center justify-center bg-zinc-100 text-zinc-400 p-2 ${className || 'w-full h-full'}`}>
                 <ImageIcon className="w-5 h-5 mb-1 opacity-40 shrink-0" />
