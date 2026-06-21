@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" />
+    <title>Immersive Shopping</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              navy: {
+                DEFAULT: '#071A2D',
+                50: '#EEF2F6',
+                100: '#D9E0E8',
+                200: '#B4C0CE',
+                300: '#8292A7',
+                400: '#53677F',
+                500: '#2D435C',
+                600: '#20364F',
+                700: '#13283E',
+                800: '#0B2136',
+                900: '#071A2D',
+              },
+              gold: {
+                DEFAULT: '#D4AF37',
+                50: '#F9F6EA',
+                100: '#F2ECD5',
+                200: '#E5D8AA',
+                300: '#D9C480',
+                400: '#D4AF37',
+                500: '#B89626',
+                600: '#8A711C',
+              }
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              serif: ['"Instrument Serif"', 'Georgia', 'serif'],
+            }
+          }
+        }
+      }
+    </script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.1.0/",
+    "react": "https://esm.sh/react@^19.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+    "@google/genai": "https://esm.sh/@google/genai@^1.10.0"
+  }
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+body {
+    font-family: 'Inter', sans-serif;
+}
+.drop-orb {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    pointer-events: none;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+    box-shadow: 
+        0 0 10px rgba(255, 255, 255, 0.7),
+        0 0 25px rgba(255, 255, 255, 0.5),
+        0 0 50px rgba(137, 196, 255, 0.6);
+    transition: opacity 0.2s ease-out, transform 0.2s ease-out;
+    opacity: 0;
+}
+.is-dragging-over .drop-orb {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+</style>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="text-navy-900 overscroll-none font-sans" style="background: radial-gradient(circle at 15% 50%, #f9f9f9, #eef1f6 50%, #e2e8f0 100%); min-h: 100vh;">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
