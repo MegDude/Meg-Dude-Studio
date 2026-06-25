@@ -765,6 +765,18 @@ const App: React.FC = () => {
         </div>
       </div>
       <div className="ic-asset-grid ic-room-grid">
+        <label className="ic-asset-tile ic-upload-tile">
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file) setNewScene(file);
+            }}
+          />
+          <span className="ic-upload-box">Upload</span>
+          <span>Upload Room</span>
+        </label>
         {filteredRooms.map((room) => (
           <button key={room.id} type="button" className="ic-asset-tile" onClick={() => loadRoomFromLibrary(room)}>
             <img src={room.thumbnailUrl} alt={room.name} />
@@ -942,10 +954,10 @@ const App: React.FC = () => {
     </section>
   );
 
-  const renderControls = () => (
+  const renderEditorControls = () => (
     <section className="ic-controls-panel">
       <div className="ic-section-heading">
-        <h3>Actions</h3>
+        <h3>{workflow === 'mood' ? 'Moodboard Direction' : 'Add or Remove Products'}</h3>
         <p>{status}</p>
       </div>
       {workflow === 'design' && (
@@ -983,18 +995,27 @@ const App: React.FC = () => {
         <strong>{ambientLight}%</strong>
         <input type="range" min="70" max="135" value={ambientLight} onChange={(event) => setAmbientLight(Number(event.target.value))} />
       </label>
+    </section>
+  );
+
+  const renderGenerateControls = () => (
+    <section className="ic-controls-panel">
+      <div className="ic-section-heading">
+        <h3>Generate and Export</h3>
+        <p>{readinessReason}</p>
+      </div>
       <div className="ic-action-strip">
-        <button type="button" onClick={handleUndo} disabled={history.length === 0}>Undo</button>
-        <button type="button" onClick={saveProject}>Save</button>
-        <button type="button" onClick={loadProject}>Load</button>
         <button type="button" onClick={primaryGenerate} disabled={!canGenerate || isLoading}>
           <Sparkles size={15} /> Generate
         </button>
+        <button type="button" onClick={saveProject}>Save</button>
+        <button type="button" onClick={loadProject}>Load</button>
+        <button type="button" onClick={handleUndo} disabled={history.length === 0}>Undo</button>
       </div>
       {hasGenerated && sceneImageUrl && workflow !== 'mood' && (
         <div className="ic-action-strip">
-          <button type="button" onClick={() => setIsCompareOpen(true)} disabled={!originalSceneUrl}>Compare</button>
           <a href={sceneImageUrl} download="interior-creator-scene.jpg">Download</a>
+          <button type="button" onClick={() => setIsCompareOpen(true)} disabled={!originalSceneUrl}>Compare</button>
         </div>
       )}
       {workflow === 'mood' && moodboardImageUrl && (
@@ -1042,8 +1063,19 @@ const App: React.FC = () => {
         </nav>
 
         <section className="ic-progress-strip" aria-label="Project progress">
-          {['Add room scene', workflow === 'mood' ? 'Select products' : 'Add products', workflow === 'design' ? 'Move and generate' : 'Generate output'].map((step, index) => {
-            const complete = index === 0 ? !!sceneImage : index === 1 ? (workflow === 'mood' ? moodProducts.length > 0 : activeProducts.length > 0 || editMode === 'remove') : hasGenerated;
+          {[
+            workflow === 'mood' ? 'Select mood products' : 'Select room scene',
+            workflow === 'mood' ? 'Set mood direction' : 'Add or remove products',
+            'Edit composition',
+            'Generate and export',
+          ].map((step, index) => {
+            const complete = index === 0
+              ? (workflow === 'mood' ? moodProducts.length > 0 : !!sceneImage)
+              : index === 1
+                ? (workflow === 'mood' ? !!moodPrompt.trim() : activeProducts.length > 0 || editMode === 'remove')
+                : index === 2
+                  ? workflow === 'mood' || !!sceneImage
+                  : hasGenerated;
             return (
               <div key={step} className={complete ? 'is-complete' : ''}>
                 <span>{index + 1}</span>
@@ -1053,21 +1085,25 @@ const App: React.FC = () => {
           })}
         </section>
 
-        <section className="ic-workspace-grid">
-          <div className="ic-primary-column">
-            <div className="ic-mobile-libraries">
-              {workflow !== 'mood' && renderRoomLibrary()}
-              {workflow === 'mood' ? renderProductLibrary('mood') : renderProductLibrary('place')}
+        <section className="ic-workflow-stack">
+          <div className="ic-flow-step">
+            {workflow !== 'mood' && renderRoomLibrary()}
+            {workflow === 'mood' && renderProductLibrary('mood')}
+          </div>
+          {workflow !== 'mood' && (
+            <div className="ic-flow-step">
+              {renderProductLibrary('place')}
             </div>
+          )}
+          <div className="ic-flow-step">
+            {renderEditorControls()}
+          </div>
+          <div className="ic-flow-step">
             {renderCanvas()}
           </div>
-          <aside className="ic-side-panel">
-            <div className="ic-desktop-libraries">
-              {workflow !== 'mood' && renderRoomLibrary()}
-              {workflow === 'mood' ? renderProductLibrary('mood') : renderProductLibrary('place')}
-            </div>
-            {renderControls()}
-          </aside>
+          <div className="ic-flow-step">
+            {renderGenerateControls()}
+          </div>
         </section>
       </main>
 

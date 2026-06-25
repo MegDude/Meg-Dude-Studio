@@ -255,13 +255,14 @@ img {
   color: var(--ic-gold);
 }
 
-.ic-workspace-grid {
+.ic-workflow-stack {
   display: grid;
   gap: 12px;
+  width: min(100%, 1040px);
+  margin: 0 auto;
 }
 
-.ic-primary-column,
-.ic-side-panel,
+.ic-flow-step,
 .ic-controls-panel,
 .ic-library-section,
 .ic-canvas-card {
@@ -583,19 +584,6 @@ img {
 
 .ic-asset-tile:hover span {
   color: var(--ic-gold);
-}
-
-.ic-mobile-libraries {
-  margin-top: 12px;
-}
-
-.ic-mobile-product-shelf {
-  display: block;
-  margin-bottom: 12px;
-}
-
-.ic-desktop-libraries {
-  display: none;
 }
 
 .ic-library-empty {
@@ -952,28 +940,8 @@ img {
     padding: 24px 18px 48px;
   }
 
-  .ic-workspace-grid {
-    grid-template-columns: minmax(0, 1fr) 340px;
-    align-items: start;
-  }
-
-  .ic-side-panel {
-    position: sticky;
-    top: 72px;
-    display: grid;
-    gap: 12px;
-  }
-
-  .ic-mobile-libraries {
-    display: none;
-  }
-
-  .ic-mobile-product-shelf {
-    display: none;
-  }
-
-  .ic-desktop-libraries {
-    display: block;
+  .ic-workflow-stack {
+    gap: 14px;
   }
 
   .ic-scene-frame {
@@ -990,10 +958,6 @@ img {
 }
 
 @media (min-width: 1120px) {
-  .ic-workspace-grid {
-    grid-template-columns: minmax(0, 1fr) 380px;
-  }
-
   .ic-asset-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
