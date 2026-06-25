@@ -754,7 +754,7 @@ const App: React.FC = () => {
         <label className="ic-asset-tile ic-upload-tile">
           <input
             type="file"
-            accept="image/png,image/jpeg"
+            accept="image/png,image/jpeg,image/webp"
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (!file) return;
@@ -800,6 +800,9 @@ const App: React.FC = () => {
             </button>
           );
         })}
+        {filteredProducts.length === 0 && (
+          <p className="ic-library-empty">No products found in this category.</p>
+        )}
       </div>
     </section>
   );
@@ -823,7 +826,7 @@ const App: React.FC = () => {
       <input
         ref={recoveryUploadRef}
         type="file"
-        accept="image/png,image/jpeg"
+        accept="image/png,image/jpeg,image/webp"
         className="ic-hidden-file-input"
         onChange={(event) => {
           const file = event.target.files?.[0];
@@ -999,17 +1002,19 @@ const App: React.FC = () => {
 
         <section className="ic-workspace-grid">
           <div className="ic-primary-column">
+            <div className="ic-mobile-product-shelf">
+              {renderProductLibrary(workflow === 'mood' ? 'mood' : 'place')}
+            </div>
             {renderCanvas()}
             <div className="ic-mobile-libraries">
               {workflow !== 'mood' && renderRoomLibrary()}
-              {workflow === 'mood' ? renderProductLibrary('mood') : renderProductLibrary('place')}
             </div>
           </div>
           <aside className="ic-side-panel">
             {renderControls()}
             <div className="ic-desktop-libraries">
-              {workflow !== 'mood' && renderRoomLibrary()}
               {workflow === 'mood' ? renderProductLibrary('mood') : renderProductLibrary('place')}
+              {workflow !== 'mood' && renderRoomLibrary()}
             </div>
           </aside>
         </section>

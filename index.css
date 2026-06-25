@@ -571,8 +571,23 @@ img {
   margin-top: 12px;
 }
 
+.ic-mobile-product-shelf {
+  display: block;
+  margin-bottom: 12px;
+}
+
 .ic-desktop-libraries {
   display: none;
+}
+
+.ic-library-empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 18px 8px;
+  color: var(--ic-navy-soft);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
 }
 
 .ic-placed-object {
@@ -739,6 +754,10 @@ img {
   }
 
   .ic-mobile-libraries {
+    display: none;
+  }
+
+  .ic-mobile-product-shelf {
     display: none;
   }
 
