@@ -78,7 +78,7 @@ const resizeImage = (file: File, targetDimension: number): Promise<File> => {
           return;
         }
 
-        ctx.fillStyle = '#f7f8fb';
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, targetDimension, targetDimension);
 
         const aspectRatio = img.width / img.height;
@@ -518,7 +518,7 @@ Requirements:
       canvas.height = 900;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Could not create moodboard preview.');
-      ctx.fillStyle = '#f7f8fb';
+      ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = '#0b1f33';
       ctx.fillRect(160, 140, 880, 560);

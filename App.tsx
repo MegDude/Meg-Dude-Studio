@@ -154,7 +154,7 @@ const createBlankSceneFile = async (label = 'Blank project'): Promise<File> => (
       return;
     }
 
-    ctx.fillStyle = '#f7f8fb';
+    ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(120, 120, canvas.width - 240, canvas.height - 240);
@@ -874,9 +874,6 @@ const App: React.FC = () => {
           <h2>{sceneImage ? 'Room Canvas' : 'Add Room Scene'}</h2>
         </div>
         <div className="ic-inline-actions">
-          <button type="button" onClick={() => setIsMeasureMode(true)} disabled={!sceneImage}>
-            <Ruler size={15} /> Measure
-          </button>
           <button type="button" onClick={saveToGallery} disabled={!hasGenerated || !generatedImageUrl}>
             <Heart size={15} /> Heart
           </button>
@@ -960,6 +957,16 @@ const App: React.FC = () => {
         <h3>{workflow === 'mood' ? 'Moodboard Direction' : 'Add or Remove Products'}</h3>
         <p>{status}</p>
       </div>
+      {workflow !== 'mood' && (
+        <div className="ic-editor-tools" aria-label="Editor tools">
+          <button type="button" onClick={() => setIsMeasureMode(true)} disabled={!sceneImage}>
+            <Ruler size={15} /> Measure room
+          </button>
+          <button type="button" className={editMode === 'remove' ? 'is-active' : ''} onClick={() => setEditMode('remove')} disabled={!sceneImage}>
+            Remove by clicking item
+          </button>
+        </div>
+      )}
       {workflow === 'design' && (
         <>
           <div className="ic-mode-toggle">
@@ -1049,9 +1056,9 @@ const App: React.FC = () => {
 
       <main className="ic-workspace">
         <section className="ic-hero-compact">
-          <p>Workspace</p>
+          <p>Interior Creator</p>
           <h1>Design Your Space <span>In Seconds</span></h1>
-          <p>An intelligent interior design assistant. Upload a room, add furniture, and let AI composite them into a photorealistic preview.</p>
+          <p>Upload a room, choose products, arrange the scene, then generate a polished design.</p>
         </section>
 
         <nav className="ic-workflow-switcher" aria-label="Workspace workflow">
@@ -1064,10 +1071,10 @@ const App: React.FC = () => {
 
         <section className="ic-progress-strip" aria-label="Project progress">
           {[
-            workflow === 'mood' ? 'Select mood products' : 'Select room scene',
-            workflow === 'mood' ? 'Set mood direction' : 'Add or remove products',
-            'Edit composition',
-            'Generate and export',
+            workflow === 'mood' ? 'References' : 'Room',
+            workflow === 'mood' ? 'Direction' : 'Products',
+            'Arrange',
+            'Generate',
           ].map((step, index) => {
             const complete = index === 0
               ? (workflow === 'mood' ? moodProducts.length > 0 : !!sceneImage)

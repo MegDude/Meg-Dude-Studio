@@ -1,12 +1,12 @@
 :root {
-  --ic-bg: #f7f8fb;
+  --ic-bg: #ffffff;
   --ic-surface: #ffffff;
   --ic-navy: #0b1f33;
   --ic-navy-soft: rgba(11, 31, 51, 0.62);
   --ic-gold: #c8a96a;
-  --ic-border: rgba(11, 31, 51, 0.1);
-  --ic-border-strong: rgba(11, 31, 51, 0.18);
-  --ic-shadow: 0 18px 50px rgba(11, 31, 51, 0.08);
+  --ic-border: rgba(11, 31, 51, 0.08);
+  --ic-border-strong: rgba(11, 31, 51, 0.16);
+  --ic-shadow: 0 14px 34px rgba(11, 31, 51, 0.055);
   --ic-font: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -150,14 +150,14 @@ img {
 .ic-workspace {
   width: min(100%, 1460px);
   margin: 0 auto;
-  padding: 18px 12px 36px;
+  padding: 14px 10px 28px;
 }
 
 .ic-hero-compact {
   display: grid;
-  gap: 8px;
-  max-width: 720px;
-  margin: 0 auto 16px;
+  gap: 6px;
+  max-width: 760px;
+  margin: 0 auto 12px;
   text-align: center;
 }
 
@@ -177,7 +177,7 @@ img {
   margin: 0;
   color: var(--ic-navy);
   font-family: var(--ic-font);
-  font-size: clamp(21px, 6vw, 44px);
+  font-size: clamp(22px, 5.2vw, 42px);
   font-weight: 500;
   letter-spacing: 0;
   line-height: 1.02;
@@ -192,8 +192,11 @@ img {
 .ic-workflow-switcher {
   display: flex;
   justify-content: center;
-  gap: 14px;
-  margin: 0 auto 12px;
+  gap: 8px;
+  width: min(100%, 560px);
+  margin: 0 auto 10px;
+  padding: 4px;
+  border: 1px solid var(--ic-border);
   overflow-x: auto;
   scrollbar-width: none;
 }
@@ -203,13 +206,19 @@ img {
 }
 
 .ic-workflow-switcher button {
-  flex: 0 0 auto;
+  flex: 1 0 auto;
+  min-width: max-content;
+  padding-inline: 10px;
   color: rgba(11, 31, 51, 0.52);
   font-size: 12px;
   white-space: nowrap;
 }
 
-.ic-workflow-switcher button.is-active,
+.ic-workflow-switcher button.is-active {
+  background: var(--ic-navy);
+  color: #fff;
+}
+
 .ic-chip-row button.is-active,
 .ic-mode-toggle button.is-active,
 .ic-asset-tile.is-active {
@@ -217,19 +226,34 @@ img {
 }
 
 .ic-progress-strip {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 680px);
+  margin: 0 auto 12px;
+  padding: 8px 0 4px;
 }
 
 .ic-progress-strip div {
+  position: relative;
   display: grid;
+  flex: 1 1 0;
   justify-items: center;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
   color: rgba(11, 31, 51, 0.46);
   text-align: center;
+}
+
+.ic-progress-strip div:not(:last-child)::after {
+  position: absolute;
+  top: 10px;
+  left: calc(50% + 14px);
+  width: calc(100% - 28px);
+  height: 1px;
+  background: currentColor;
+  content: "";
+  opacity: 0.38;
 }
 
 .ic-progress-strip span {
@@ -246,7 +270,7 @@ img {
 
 .ic-progress-strip p {
   margin: 0;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   line-height: 1.14;
 }
@@ -257,9 +281,13 @@ img {
 
 .ic-workflow-stack {
   display: grid;
-  gap: 12px;
-  width: min(100%, 1040px);
+  gap: 10px;
+  width: min(100%, 1120px);
   margin: 0 auto;
+}
+
+.ic-flow-step {
+  scroll-margin-top: 70px;
 }
 
 .ic-flow-step,
@@ -320,7 +348,8 @@ img {
 .ic-inline-actions,
 .ic-action-strip,
 .ic-mode-toggle,
-.ic-chip-row {
+.ic-chip-row,
+.ic-editor-tools {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -333,17 +362,34 @@ img {
 
 .ic-canvas-filter {
   min-width: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
 }
 
 .ic-uploader-shell {
-  min-height: 292px;
+  width: 100%;
+  min-height: 280px;
+  max-height: min(68vh, 620px);
   border: 1px dashed var(--ic-border-strong);
-  background: #fbfcfd;
+  background: #fff;
   box-shadow: none;
 }
 
 .ic-scene-frame {
-  aspect-ratio: 4 / 4.4 !important;
+  aspect-ratio: 4 / 3 !important;
+  max-width: min(100%, calc(min(68vh, 620px) * 4 / 3));
+  max-height: min(68vh, 620px);
+  height: auto !important;
+  contain: layout paint;
+}
+
+.ic-scene-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: min(68vh, 620px);
+  object-fit: contain !important;
 }
 
 .ic-uploader-empty {
@@ -418,6 +464,31 @@ img {
   display: grid;
   gap: 12px;
   padding: 12px;
+}
+
+.ic-editor-tools {
+  justify-content: flex-start;
+  padding-bottom: 2px;
+}
+
+.ic-editor-tools button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  border: 0;
+  background: transparent;
+  color: rgba(11, 31, 51, 0.72);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ic-editor-tools button:hover,
+.ic-editor-tools button:focus-visible,
+.ic-editor-tools button.is-active {
+  color: var(--ic-gold);
+  outline: none;
 }
 
 .ic-controls-panel textarea,
@@ -506,21 +577,22 @@ img {
 }
 
 .ic-asset-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  display: flex;
   gap: 8px;
-  max-height: 300px;
-  overflow-y: auto;
-  padding-right: 2px;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 2px 4px 0;
   scrollbar-width: thin;
 }
 
 .ic-room-grid {
-  max-height: 220px;
+  max-height: none;
 }
 
 .ic-asset-tile {
   display: grid;
+  flex: 0 0 92px;
   gap: 5px;
   min-width: 0;
   padding: 0;
@@ -536,7 +608,7 @@ img {
   width: 100%;
   aspect-ratio: 1 / 0.86;
   border: 1px solid var(--ic-border);
-  background: #eef2f6;
+  background: #fff;
   object-fit: cover;
 }
 
@@ -761,7 +833,7 @@ img {
   max-height: min(68vh, 680px);
   overflow: hidden;
   border: 1px solid var(--ic-border);
-  background: #f7f8fb;
+  background: #fff;
   cursor: crosshair;
 }
 
@@ -945,20 +1017,17 @@ img {
   }
 
   .ic-scene-frame {
-    aspect-ratio: 16 / 10 !important;
+    aspect-ratio: 4 / 3 !important;
+    max-width: min(100%, calc(min(70vh, 680px) * 4 / 3));
+    max-height: min(70vh, 680px);
   }
 
   .ic-uploader-shell {
-    min-height: 480px;
+    min-height: min(54vw, 520px);
+    max-height: min(70vh, 680px);
   }
 
   .ic-gallery-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1120px) {
-  .ic-asset-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -978,11 +1047,10 @@ img {
 
   .ic-workflow-switcher {
     justify-content: flex-start;
-    padding-bottom: 2px;
   }
 
   .ic-progress-strip {
-    gap: 5px;
+    width: 100%;
   }
 
   .ic-progress-strip p {
@@ -1018,7 +1086,10 @@ img {
 
   .ic-asset-grid {
     gap: 7px;
-    max-height: 238px;
+  }
+
+  .ic-asset-tile {
+    flex-basis: 84px;
   }
 
   .ic-asset-tile span {
