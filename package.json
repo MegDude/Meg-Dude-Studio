@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test:default-images": "node tests/defaultImageFallback.test.mjs",
+    "test:product-images": "node tests/productLibraryImages.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

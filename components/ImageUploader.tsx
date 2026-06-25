@@ -26,6 +26,7 @@ interface ImageUploaderProps {
  isDropZone?: boolean;
  onProductDrop?: (position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
  onObjectMove?: (id: string, position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
+ onObjectDelete?: (id: string) => void;
  onLibraryProductDrop?: (product: { url: string; name: string }, position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
  onScenePointSelect?: (position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
  persistedOrbPosition?: { x: number; y: number } | null;
@@ -50,7 +51,7 @@ const WarningIcon: React.FC = () => (
 );
 
 
-const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, label, onFileSelect, imageUrl, className = "", isDropZone = false, onProductDrop, onLibraryProductDrop, onScenePointSelect, persistedOrbPosition, showDebugButton, onDebugClick, isTouchHovering = false, touchOrbPosition = null, placedObjects = [], onObjectMove, showPerspectiveGrid = false }, ref) => {
+const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, label, onFileSelect, imageUrl, className = "", isDropZone = false, onProductDrop, onLibraryProductDrop, onScenePointSelect, persistedOrbPosition, showDebugButton, onDebugClick, isTouchHovering = false, touchOrbPosition = null, placedObjects = [], onObjectMove, onObjectDelete, showPerspectiveGrid = false }, ref) => {
  const inputRef = useRef<HTMLInputElement>(null);
  const imgRef = useRef<HTMLImageElement>(null);
  const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -371,6 +372,19 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  }}
  >
  <ImageWithFallback src={obj.thumbnailUrl} productName={obj.name || "Object"} productId={obj.id} className="w-full h-full object-cover" style={{ filter: obj.styleFilter }} />
+ {onObjectDelete && (
+ <button
+ type="button"
+ className="ic-object-delete"
+ aria-label={`Remove ${obj.name || 'placed product'}`}
+ onClick={(event) => {
+ event.stopPropagation();
+ onObjectDelete(obj.id);
+ }}
+ >
+ ×
+ </button>
+ )}
  </div>
  );
  })}
