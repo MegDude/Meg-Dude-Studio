@@ -1287,6 +1287,118 @@ body {
  line-height: 1.5;
 }
 
+.ic-control-bar {
+ position: sticky;
+ top: 0;
+ z-index: 100;
+ background: rgba(255, 255, 255, .96);
+ border-bottom: 1px solid var(--color-border);
+ backdrop-filter: blur(18px);
+ -webkit-backdrop-filter: blur(18px);
+}
+
+.ic-workspace-header {
+ width: 100%;
+ background: transparent;
+}
+
+.ic-workspace-header-inner {
+ display: grid;
+ grid-template-columns: auto minmax(0, 1fr) auto;
+ align-items: center;
+ gap: 18px;
+ width: min(1440px, 100%);
+ margin: 0 auto;
+ padding: 10px 18px;
+ min-height: 68px;
+}
+
+.ic-workspace-header-inner > .relative {
+ display: contents;
+}
+
+.ic-workspace-header-brand {
+ display: flex;
+ align-items: baseline;
+ gap: 14px;
+ min-width: 0;
+ white-space: nowrap;
+}
+
+.ic-workspace-header-section {
+ color: rgba(11, 31, 51, .54);
+ font-size: 12px;
+ font-weight: 650;
+}
+
+.ic-workspace-header-tabs,
+.ic-workspace-header-actions {
+ display: flex;
+ align-items: center;
+ gap: 18px;
+ min-width: 0;
+ white-space: nowrap;
+}
+
+.ic-workspace-header-tabs {
+ overflow-x: auto;
+ scrollbar-width: none;
+}
+
+.ic-workspace-header-tabs::-webkit-scrollbar {
+ display: none;
+}
+
+.ic-workspace-header .ic-workflow-mode,
+.ic-header-action {
+ flex: 0 0 auto;
+ min-height: 28px !important;
+ padding: 0 !important;
+ border: 0 !important;
+ background: transparent !important;
+ color: rgba(11, 31, 51, .68) !important;
+ font-family: var(--font-sans) !important;
+ font-size: 13px !important;
+ font-weight: 600 !important;
+ line-height: 1 !important;
+ letter-spacing: 0 !important;
+ white-space: nowrap;
+}
+
+.ic-workspace-header .ic-workflow-mode.is-active,
+.ic-workspace-header .ic-workflow-mode:hover,
+.ic-workspace-header .ic-workflow-mode:focus-visible,
+.ic-header-action:hover,
+.ic-header-action:focus-visible {
+ color: var(--color-gold-cold) !important;
+}
+
+.ic-workspace-header .ic-workflow-mode[aria-selected="true"] {
+ color: var(--color-gold-cold) !important;
+}
+
+.ic-workspace-header-actions .ic-menu-trigger {
+ flex: 0 0 auto;
+ width: 28px;
+ height: 28px;
+ min-height: 28px !important;
+ padding: 0 !important;
+ display: inline-flex;
+ align-items: center;
+ justify-content: center;
+ border: 0 !important;
+ background: transparent !important;
+}
+
+.ic-menu-panel {
+ position: fixed;
+ right: 18px;
+ top: 62px;
+ min-width: 144px;
+ padding: 10px;
+ z-index: 120;
+}
+
 .ic-app-shell {
  background: var(--color-app-bg) !important;
  color: var(--color-navy-rich) !important;
@@ -1317,7 +1429,11 @@ body {
 .ic-app-shell h1,
 .ic-project-header h1 {
  font-size: clamp(2rem, 4vw, 3.25rem) !important;
- line-height: 1.02 !important;
+ font-family: "Instrument Serif", Georgia, serif !important;
+ font-weight: 400 !important;
+ line-height: 1.1 !important;
+ letter-spacing: 0 !important;
+ color: var(--color-gold-cold) !important;
 }
 
 .ic-app-shell h2 {
@@ -2062,6 +2178,41 @@ body {
 
  .dp-wordmark {
    font-size: .9rem !important;
+ }
+
+ .ic-workspace-header-inner {
+   min-height: 58px;
+   gap: 10px;
+   padding: 8px 10px;
+ }
+
+ .ic-workspace-header-section {
+   display: none;
+ }
+
+ .ic-workspace-header-tabs {
+   gap: 12px;
+ }
+
+ .ic-workspace-header-actions {
+   gap: 10px;
+ }
+
+ .ic-workspace-header .ic-workflow-mode,
+ .ic-header-action {
+   font-size: 11px !important;
+   min-height: 26px !important;
+ }
+
+ .ic-workspace-header-actions .ic-menu-trigger {
+   width: 26px;
+   height: 26px;
+   min-height: 26px !important;
+ }
+
+ .ic-menu-panel {
+   top: 56px;
+   right: 10px;
  }
 
  .ic-project-header {

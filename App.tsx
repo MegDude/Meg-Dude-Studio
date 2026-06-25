@@ -160,6 +160,8 @@ const DesignStepGuide: React.FC<{ activeStep: 1 | 2 | 3 }> = ({ activeStep }) =>
 };
 
 type WorkspaceControlBarProps = {
+ appMode: AppMode;
+ setAppMode: (mode: AppMode) => void;
  handleUndo: () => void;
  saveProject: () => void;
  loadProject: () => void;
@@ -170,6 +172,8 @@ type WorkspaceControlBarProps = {
 };
 
 const WorkspaceControlBar: React.FC<WorkspaceControlBarProps> = ({
+ appMode,
+ setAppMode,
  handleUndo,
  saveProject,
  loadProject,
@@ -179,6 +183,11 @@ const WorkspaceControlBar: React.FC<WorkspaceControlBarProps> = ({
  onNewProject,
 }) => {
  const [isMenuOpen, setIsMenuOpen] = useState(false);
+ const modes: Array<{ label: string; value: AppMode }> = [
+ { label: 'Design Space', value: 'placement' },
+ { label: 'Stage Listing', value: 'staging' },
+ { label: 'Create Moodboard', value: 'moodboard' },
+ ];
 
  const runMenuAction = (action: () => void) => {
  action();
@@ -187,21 +196,38 @@ const WorkspaceControlBar: React.FC<WorkspaceControlBarProps> = ({
 
  return (
  <section className="ic-control-bar w-full">
- <nav className="ic-top-nav w-full border-b border-navy-100 bg-white px-4 py-3" aria-label="Global navigation">
- <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4">
+ <nav className="ic-workspace-header w-full" aria-label="Workspace controls">
+ <div className="ic-workspace-header-inner">
+ <div className="ic-workspace-header-brand">
  <span className="dp-wordmark text-navy-900 text-sm font-bold">Interior Creator</span>
- <div className="ic-global-links hidden md:flex items-center gap-7">
- <span className="is-active">Workspace</span>
- <span>Projects</span>
- <span>Library</span>
- <span>Exports</span>
+ <span className="ic-workspace-header-section">Workspace</span>
  </div>
- <div className="hidden md:flex items-center gap-5">
- <button type="button" onClick={onNewProject} className="ic-top-action dp-kicker">
- New Project
+
+ <div className="ic-workspace-header-tabs" role="tablist" aria-label="Workspace workflows">
+ {modes.map((mode) => (
+ <button
+ key={mode.value}
+ type="button"
+ role="tab"
+ aria-selected={appMode === mode.value}
+ onClick={() => setAppMode(mode.value)}
+ className={`ic-workflow-mode ${appMode === mode.value ? 'is-active' : ''}`}
+ >
+ {mode.label}
  </button>
+ ))}
  </div>
- <div className="relative">
+
+ <div className="ic-workspace-header-actions" aria-label="Workspace actions">
+ <button type="button" onClick={handleUndo} disabled={!canUndo} className="ic-header-action">
+ Undo
+ </button>
+ <button type="button" onClick={saveProject} className="ic-header-action">
+ Save
+ </button>
+ <button type="button" onClick={loadProject} className="ic-header-action">
+ Load
+ </button>
  <button
  onClick={() => setIsMenuOpen(open => !open)}
  className="ic-menu-trigger text-navy-700 hover:text-[#C8A96A] transition-colors"
@@ -210,19 +236,16 @@ const WorkspaceControlBar: React.FC<WorkspaceControlBarProps> = ({
  >
  <Menu className="h-5 w-5" />
  </button>
+ </div>
+
+ <div className="relative">
  {isMenuOpen && (
  <div className="ic-menu-panel dp-panel" role="menu">
  <button type="button" role="menuitem" onClick={() => runMenuAction(onHistoryClick)} className="ic-menu-item">
  History{historyCount > 0 ? ` ${historyCount}` : ''}
  </button>
- <button type="button" role="menuitem" onClick={() => runMenuAction(handleUndo)} disabled={!canUndo} className="ic-menu-item">
- Undo
- </button>
- <button type="button" role="menuitem" onClick={() => runMenuAction(saveProject)} className="ic-menu-item">
- Save
- </button>
- <button type="button" role="menuitem" onClick={() => runMenuAction(loadProject)} className="ic-menu-item">
- Load
+ <button type="button" role="menuitem" onClick={() => runMenuAction(onNewProject)} className="ic-menu-item">
+ New Project
  </button>
  </div>
  )}
@@ -2007,6 +2030,8 @@ Return only the cleaned final room image.
  />
  <div className="flex flex-col items-center w-full">
  <WorkspaceControlBar
+ appMode={appMode}
+ setAppMode={setAppMode}
  handleUndo={handleUndo}
  saveProject={saveProject}
  loadProject={loadProject}
@@ -2049,7 +2074,6 @@ Return only the cleaned final room image.
  </button>
  </div>
  </div>
- <ModeSelector appMode={appMode} setAppMode={setAppMode} />
  {renderContent()}
  </section>
  <aside className="ic-context-rail">
