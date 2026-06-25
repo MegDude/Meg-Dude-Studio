@@ -254,13 +254,8 @@ const createLocalStagedPreview = async (
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   if (mode === 'stage' && isRemoval) {
-    ctx.globalCompositeOperation = 'source-over';
-    const patchW = canvas.width * 0.42;
-    const patchH = canvas.height * 0.18;
-    const patchX = (canvas.width - patchW) / 2;
-    const patchY = canvas.height * 0.58;
-    ctx.fillStyle = 'rgba(247, 248, 251, 0.34)';
-    ctx.fillRect(patchX, patchY, patchW, patchH);
+    // Keep the source image intact for local fallback removal previews. A fake
+    // patch is worse than no local edit because it implies a bad inpaint.
   } else if (mode === 'stage') {
     ctx.globalCompositeOperation = 'source-over';
     const floorY = canvas.height * 0.72;
@@ -363,6 +358,8 @@ Requirements:
 - Retain the original room architecture, walls, floors, windows, and camera angle.
 - Add photorealistic furniture, rugs, plants, art, and decor that fit the requested style.
 - Match perspective, scale, lighting, color temperature, and shadows.
+- For removal or cleanup requests, inpaint the removed area with matching surrounding texture, grain, material, lighting, and shadows.
+- Never leave ghosting, leftover shadows, light patches, blurred rectangles, halos, outlines, duplicate texture, or visible edit marks where an item was removed.
 - Return only the final staged room image. Do not add labels, text, borders, markers, or UI elements.
 `;
 

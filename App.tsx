@@ -14,6 +14,7 @@ import { FALLBACK_DESIGN_IMAGES, canGenerateDesign } from './src/lib/defaultImag
 
 type Workflow = 'design' | 'stage' | 'mood';
 type EditMode = 'add' | 'remove';
+type ProductSourceFilter = 'All' | 'Attached' | 'Legends' | 'West Elm' | 'Pottery Barn' | 'Austin';
 
 type SceneLibraryItem = {
   id: string;
@@ -48,6 +49,28 @@ type HistorySnapshot = {
   selectedRoom: SelectedRoom | null;
   sceneImage: File | null;
   placedObjects: PlacedObject[];
+};
+
+const productSourceFilters: ProductSourceFilter[] = ['All', 'Attached', 'West Elm', 'Pottery Barn', 'Austin', 'Legends'];
+
+const getProductSourceLabel = (product: ProductLibraryItem) => {
+  if (product.sourceType === 'Retailer') return product.brand;
+  if (product.sourceType === 'Austin') return 'Austin catalog';
+  return 'Legends';
+};
+
+const matchesProductSource = (product: ProductLibraryItem, source: ProductSourceFilter) => {
+  if (source === 'All') return true;
+  if (source === 'Attached') return product.sourceType === 'Retailer' || product.sourceType === 'Austin';
+  if (source === 'Legends') return product.sourceType === 'Legends';
+  if (source === 'Austin') return product.sourceType === 'Austin';
+  return product.sourceType === 'Retailer' && product.brand === source;
+};
+
+const productSourceRank = (product: ProductLibraryItem) => {
+  if (product.sourceType === 'Retailer') return 0;
+  if (product.sourceType === 'Austin') return 1;
+  return 2;
 };
 
 type SavedProject = {
@@ -183,6 +206,7 @@ const App: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedProductFile, setSelectedProductFile] = useState<File | null>(null);
   const [removePrompt, setRemovePrompt] = useState('');
+  const [removeTargetPosition, setRemoveTargetPosition] = useState<{ x: number; y: number } | null>(null);
   const [stagePrompt, setStagePrompt] = useState('Modern warm-minimal staging with clean lines, calm neutral textiles, refined lighting, and a polished listing-ready finish.');
   const [designBrief, setDesignBrief] = useState('Create a polished interior composition using the selected room and products.');
   const [keepPrompt, setKeepPrompt] = useState('');
@@ -210,6 +234,7 @@ const App: React.FC = () => {
   const [touchOrbPosition, setTouchOrbPosition] = useState<{ x: number; y: number } | null>(null);
   const [activeRoomCategory, setActiveRoomCategory] = useState('All');
   const [activeProductCategory, setActiveProductCategory] = useState('All');
+  const [activeProductSource, setActiveProductSource] = useState<ProductSourceFilter>('All');
   const sceneImgRef = useRef<HTMLImageElement>(null);
   const recoveryUploadRef = useRef<HTMLInputElement>(null);
 
@@ -222,8 +247,12 @@ const App: React.FC = () => {
     SCENE_LIBRARY.filter((room) => activeRoomCategory === 'All' || room.type === activeRoomCategory)
   ), [activeRoomCategory]);
   const filteredProducts = useMemo(() => (
-    PRODUCT_LIBRARY.filter((product) => activeProductCategory === 'All' || product.category === activeProductCategory)
-  ), [activeProductCategory]);
+    PRODUCT_LIBRARY
+      .filter((product) => activeProductCategory === 'All' || product.category === activeProductCategory)
+      .filter((product) => matchesProductSource(product, activeProductSource))
+      .slice()
+      .sort((a, b) => productSourceRank(a) - productSourceRank(b) || a.name.localeCompare(b.name))
+  ), [activeProductCategory, activeProductSource]);
 
   const setNewScene = useCallback(async (file: File, room?: SelectedRoom) => {
     setSceneImage(file);
@@ -377,6 +406,13 @@ const App: React.FC = () => {
     setPlacedObjects((previous) => previous.filter((item) => item.id !== id));
     setStatus('Product removed from scene');
   }, [pushHistory]);
+
+  const handleObjectRotate = useCallback((id: string, delta: number) => {
+    setPlacedObjects((previous) => previous.map((item) => (
+      item.id === id ? { ...item, rotation: ((item.rotation || 0) + delta + 360) % 360 } : item
+    )));
+    setStatus('Product rotation updated');
+  }, []);
 
   const handleUndo = useCallback(() => {
     const snapshot = history[history.length - 1];
@@ -539,9 +575,10 @@ const App: React.FC = () => {
     setError(null);
     setStatus('Removing item');
     try {
-      const { finalImageUrl, finalPrompt } = await stageRoomImage(sceneImage, `Remove ${removePrompt}. Rebuild the room naturally and preserve all other architecture, lighting, and furniture.`);
+      const { finalImageUrl, finalPrompt } = await stageRoomImage(sceneImage, `Remove ${removePrompt}. Cleanly inpaint the removed area using the surrounding wall, floor, fabric, reflections, grain, and lighting. Do not leave any shadow, glow, pale patch, blurred rectangle, outline, duplicate texture, or visible edit mark. Preserve all other architecture, lighting, furniture, and camera perspective.`);
       setSceneImage(await imageUrlToFile(finalImageUrl, `clean-room-${Date.now()}.jpg`));
       setPlacedObjects([]);
+      setRemoveTargetPosition(null);
       setDebugPrompt(finalPrompt);
       setDebugImageUrl(null);
       setStatus('Clean room generated');
@@ -742,12 +779,21 @@ const App: React.FC = () => {
     <section className="ic-library-section" aria-label="Product library">
       <div className="ic-section-heading">
         <h3>{mode === 'mood' ? 'Mood Products' : 'Product Library'} <span className="ic-count">({filteredProducts.length})</span></h3>
-        <div className="ic-chip-row">
-          {['All', ...Array.from(new Set(PRODUCT_LIBRARY.map((item) => item.category)))].map((category) => (
-            <button key={category} type="button" className={activeProductCategory === category ? 'is-active' : ''} onClick={() => setActiveProductCategory(category)}>
-              {category}
-            </button>
-          ))}
+        <div className="ic-library-filters">
+          <div className="ic-chip-row" aria-label="Product source">
+            {productSourceFilters.map((source) => (
+              <button key={source} type="button" className={activeProductSource === source ? 'is-active' : ''} onClick={() => setActiveProductSource(source)}>
+                {source}
+              </button>
+            ))}
+          </div>
+          <div className="ic-chip-row" aria-label="Product category">
+            {['All', ...Array.from(new Set(PRODUCT_LIBRARY.map((item) => item.category)))].map((category) => (
+              <button key={category} type="button" className={activeProductCategory === category ? 'is-active' : ''} onClick={() => setActiveProductCategory(category)}>
+                {category}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       <div className="ic-asset-grid">
@@ -797,6 +843,7 @@ const App: React.FC = () => {
             >
               <ImageWithFallback src={product.thumbnailUrl} productName={product.name} productId={product.id} alt={product.name} />
               <span>{product.name}</span>
+              <small>{getProductSourceLabel(product)}</small>
             </button>
           );
         })}
@@ -843,12 +890,15 @@ const App: React.FC = () => {
           onProductDrop={editMode === 'remove' ? undefined : handleCanvasDrop}
           onObjectMove={handleObjectMove}
           onObjectDelete={handleObjectDelete}
+          onObjectRotate={handleObjectRotate}
           onLibraryProductDrop={handleLibraryProductDrop}
-          onScenePointSelect={editMode === 'remove' ? (_position, relative) => {
+          persistedOrbPosition={editMode === 'remove' ? removeTargetPosition : null}
+          onScenePointSelect={editMode === 'remove' ? (position, relative) => {
+            setRemoveTargetPosition(position);
             setRemovePrompt(`item around ${Math.round(relative.xPercent)}% from the left and ${Math.round(relative.yPercent)}% from the top`);
-            setStatus('Removal target selected');
+            setStatus('Removal target selected. Click Generate to remove it.');
           } : undefined}
-          showPerspectiveGrid={!!selectedProduct || activeProducts.length > 0}
+          showPerspectiveGrid={editMode === 'add' && (!!selectedProduct || isTouchDragging || isTouchHovering)}
           showDebugButton={!!debugPrompt && !isLoading}
           onDebugClick={() => setIsDebugOpen(true)}
           isTouchHovering={isTouchHovering}
@@ -908,7 +958,10 @@ const App: React.FC = () => {
             <textarea value={designBrief} onChange={(event) => setDesignBrief(event.target.value)} placeholder="Describe the design brief." />
           )}
           {editMode === 'remove' && (
-            <textarea value={removePrompt} onChange={(event) => setRemovePrompt(event.target.value)} placeholder="Tap the room or describe what to remove." />
+            <>
+              <p className="ic-small-note">Click or tap the item in the room image, then Generate to remove it.</p>
+              <textarea value={removePrompt} onChange={(event) => setRemovePrompt(event.target.value)} placeholder="Tap the room or describe what to remove." />
+            </>
           )}
         </>
       )}
@@ -1002,25 +1055,23 @@ const App: React.FC = () => {
 
         <section className="ic-workspace-grid">
           <div className="ic-primary-column">
-            <div className="ic-mobile-product-shelf">
-              {renderProductLibrary(workflow === 'mood' ? 'mood' : 'place')}
-            </div>
-            {renderCanvas()}
             <div className="ic-mobile-libraries">
               {workflow !== 'mood' && renderRoomLibrary()}
+              {workflow === 'mood' ? renderProductLibrary('mood') : renderProductLibrary('place')}
             </div>
+            {renderCanvas()}
           </div>
           <aside className="ic-side-panel">
-            {renderControls()}
             <div className="ic-desktop-libraries">
-              {workflow === 'mood' ? renderProductLibrary('mood') : renderProductLibrary('place')}
               {workflow !== 'mood' && renderRoomLibrary()}
+              {workflow === 'mood' ? renderProductLibrary('mood') : renderProductLibrary('place')}
             </div>
+            {renderControls()}
           </aside>
         </section>
       </main>
 
-      <MeasureOverlay isActive={isMeasureMode} onClose={() => setIsMeasureMode(false)} />
+      <MeasureOverlay isActive={isMeasureMode} imageUrl={sceneImageUrl} onClose={() => setIsMeasureMode(false)} />
 
       {isGalleryOpen && (
         <div className="ic-modal-backdrop" onClick={() => setIsGalleryOpen(false)}>

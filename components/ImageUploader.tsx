@@ -27,6 +27,7 @@ interface ImageUploaderProps {
  onProductDrop?: (position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
  onObjectMove?: (id: string, position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
  onObjectDelete?: (id: string) => void;
+ onObjectRotate?: (id: string, delta: number) => void;
  onLibraryProductDrop?: (product: { url: string; name: string }, position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
  onScenePointSelect?: (position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
  persistedOrbPosition?: { x: number; y: number } | null;
@@ -51,7 +52,7 @@ const WarningIcon: React.FC = () => (
 );
 
 
-const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, label, onFileSelect, imageUrl, className = "", isDropZone = false, onProductDrop, onLibraryProductDrop, onScenePointSelect, persistedOrbPosition, showDebugButton, onDebugClick, isTouchHovering = false, touchOrbPosition = null, placedObjects = [], onObjectMove, onObjectDelete, showPerspectiveGrid = false }, ref) => {
+const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, label, onFileSelect, imageUrl, className = "", isDropZone = false, onProductDrop, onLibraryProductDrop, onScenePointSelect, persistedOrbPosition, showDebugButton, onDebugClick, isTouchHovering = false, touchOrbPosition = null, placedObjects = [], onObjectMove, onObjectDelete, onObjectRotate, showPerspectiveGrid = false }, ref) => {
  const inputRef = useRef<HTMLInputElement>(null);
  const imgRef = useRef<HTMLImageElement>(null);
  const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -71,9 +72,9 @@ const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, la
  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
  const file = event.target.files?.[0];
  if (file) {
- const allowedTypes = ['image/jpeg', 'image/png'];
+ const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
  if (!allowedTypes.includes(file.type)) {
- setFileTypeError('For best results, please use PNG, JPG, or JPEG formats.');
+ setFileTypeError('For best results, please use PNG, JPG, JPEG, or WebP formats.');
  } else {
  setFileTypeError(null);
  }
@@ -271,9 +272,9 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  // Case 2: A file is being dropped to be uploaded
  const file = event.dataTransfer.files?.[0];
  if (file && file.type.startsWith('image/')) {
- const allowedTypes = ['image/jpeg', 'image/png'];
+ const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
  if (!allowedTypes.includes(file.type)) {
- setFileTypeError('For best results, please use PNG, JPG, or JPEG formats.');
+ setFileTypeError('For best results, please use PNG, JPG, JPEG, or WebP formats.');
  } else {
  setFileTypeError(null);
  }
@@ -319,7 +320,7 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  id={id}
  ref={inputRef}
  onChange={handleFileChange}
- accept="image/png, image/jpeg"
+ accept="image/png, image/jpeg, image/webp"
  className="hidden"
  />
  {imageUrl ? (
@@ -362,7 +363,7 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  return (
  <div 
  key={obj.id} 
- className="absolute w-12 h-12 dp-radius border-[3px] border-white overflow-hidden pointer-events-auto cursor-move animate-fade-in" draggable="true" onDragStart={(e) => { e.dataTransfer.setData('text/plain', `reposition:${obj.id}`); e.stopPropagation(); }}
+ className="ic-placed-object absolute w-12 h-12 dp-radius pointer-events-auto cursor-move animate-fade-in" draggable="true" onDragStart={(e) => { e.dataTransfer.setData('text/plain', `reposition:${obj.id}`); e.stopPropagation(); }}
  style={{ 
  left: touchDragObj?.id === obj.id ? touchDragObj.x - (imgRef.current?.parentElement?.getBoundingClientRect().left || 0) : derivedX, 
  top: touchDragObj?.id === obj.id ? touchDragObj.y - (imgRef.current?.parentElement?.getBoundingClientRect().top || 0) : derivedY,
@@ -371,7 +372,31 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  opacity: touchDragObj?.id === obj.id ? 0.8 : 1
  }}
  >
- <ImageWithFallback src={obj.thumbnailUrl} productName={obj.name || "Object"} productId={obj.id} className="w-full h-full object-cover" style={{ filter: obj.styleFilter }} />
+ <ImageWithFallback src={obj.thumbnailUrl} productName={obj.name || "Object"} productId={obj.id} className="ic-placed-object-image" style={{ filter: obj.styleFilter }} />
+ {onObjectRotate && (
+ <div className="ic-object-rotate-controls" aria-label={`Rotate ${obj.name || 'placed product'}`}>
+ <button
+ type="button"
+ aria-label="Rotate left"
+ onClick={(event) => {
+ event.stopPropagation();
+ onObjectRotate(obj.id, -15);
+ }}
+ >
+ -15
+ </button>
+ <button
+ type="button"
+ aria-label="Rotate right"
+ onClick={(event) => {
+ event.stopPropagation();
+ onObjectRotate(obj.id, 15);
+ }}
+ >
+ +15
+ </button>
+ </div>
+ )}
  {onObjectDelete && (
  <button
  type="button"
