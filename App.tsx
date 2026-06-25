@@ -82,6 +82,19 @@ const dataURLtoFile = (dataurl: string, filename: string): File => {
  return new File([u8arr], filename, {type:mime});
 };
 
+const imageUrlToFile = async (imageUrl: string, filename: string): Promise<File> => {
+ if (imageUrl.startsWith('data:')) {
+ return dataURLtoFile(imageUrl, filename);
+ }
+
+ const response = await fetch(imageUrl);
+ if (!response.ok) {
+ throw new Error(`Could not load generated image (${response.status}).`);
+ }
+ const blob = await response.blob();
+ return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+};
+
 const fileToBase64 = (file: File): Promise<string> => {
  return new Promise((resolve, reject) => {
  const reader = new FileReader();
@@ -302,6 +315,30 @@ const App: React.FC = () => {
  const [debugImageUrl, setDebugImageUrl] = useState<string | null>(null);
  const [debugPrompt, setDebugPrompt] = useState<string | null>(null);
  const [isDebugModalOpen, setIsDebugModalOpen] = useState(false);
+
+ useEffect(() => {
+ const handleRuntimeError = (event: ErrorEvent) => {
+ console.error('Runtime error caught by workspace shell:', event.error || event.message);
+ setError(`An unexpected app error occurred. ${event.message || 'Please reload and try again.'}`);
+ setIsLoading(false);
+ };
+
+ const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+ const reason = event.reason instanceof Error ? event.reason.message : String(event.reason || '');
+ console.error('Unhandled async error caught by workspace shell:', event.reason);
+ setError(`An unexpected generation error occurred. ${reason || 'Please try again.'}`);
+ setIsLoading(false);
+ event.preventDefault();
+ };
+
+ window.addEventListener('error', handleRuntimeError);
+ window.addEventListener('unhandledrejection', handleUnhandledRejection);
+
+ return () => {
+ window.removeEventListener('error', handleRuntimeError);
+ window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+ };
+ }, []);
 
  // New states for Multi-Object and Compare
  const [originalSceneImageUrl, setOriginalSceneImageUrl] = useState<string | null>(null);
@@ -711,7 +748,7 @@ const App: React.FC = () => {
  
  setDebugImageUrl(debugImageUrl);
  setDebugPrompt(finalPrompt);
- const newSceneFile = dataURLtoFile(finalImageUrl, `generated-scene-${Date.now()}.jpeg`);
+ const newSceneFile = await imageUrlToFile(finalImageUrl, `generated-scene-${Date.now()}.jpeg`);
  setSceneImage(newSceneFile);
         setPlacedObjects([]);
         saveIterationToHistory(newSceneFile, []);
@@ -743,7 +780,7 @@ Preserve the original architecture, camera angle, image crop, color tone, and al
 Return only the cleaned final room image.
 `;
  const { finalImageUrl, finalPrompt } = await stageRoomImage(sceneImage, removalInstruction);
- const newSceneFile = dataURLtoFile(finalImageUrl, `removed-item-scene-${Date.now()}.jpeg`);
+ const newSceneFile = await imageUrlToFile(finalImageUrl, `removed-item-scene-${Date.now()}.jpeg`);
  setSceneImage(newSceneFile);
  setPlacedObjects([]);
  setDebugImageUrl(null);
@@ -771,7 +808,7 @@ Return only the cleaned final room image.
 
       const { finalImageUrl } = await editProductBackground(productToEdit.image, bgEditPrompt.trim());
       
-      const newImageFile = dataURLtoFile(finalImageUrl, `edited-bg-${productToEdit.id}.jpg`);
+      const newImageFile = await imageUrlToFile(finalImageUrl, `edited-bg-${productToEdit.id}.jpg`);
       
       setPlacedObjects(prev => 
         prev.map(p => p.id === editingProductBgId ? { ...p, image: newImageFile, thumbnailUrl: finalImageUrl } : p)
@@ -870,7 +907,7 @@ Return only the cleaned final room image.
  sceneImage,
  fullPrompt
  );
- const newSceneFile = dataURLtoFile(finalImageUrl, `staged-composite-${Date.now()}.jpeg`);
+ const newSceneFile = await imageUrlToFile(finalImageUrl, `staged-composite-${Date.now()}.jpeg`);
  setSceneImage(newSceneFile);
  setPlacedObjects([]);
  setDebugImageUrl(null);
@@ -879,7 +916,7 @@ Return only the cleaned final room image.
  return;
  }
  const { finalImageUrl, finalPrompt } = await stageRoomImage(sceneImage, fullPrompt);
- const newSceneFile = dataURLtoFile(finalImageUrl, `staged-scene-${Date.now()}.jpeg`);
+ const newSceneFile = await imageUrlToFile(finalImageUrl, `staged-scene-${Date.now()}.jpeg`);
  setSceneImage(newSceneFile);
         setDebugImageUrl(null);
         saveIterationToHistory(newSceneFile, []);
