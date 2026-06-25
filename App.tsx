@@ -6,9 +6,8 @@ import { suggestMatchingItems } from './src/services/matchingService';
 */
 
 import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { generateCompositeImage, stageRoomImage } from './src/services/geminiService';
+import { editProductBackground, generateMoodboard, generateMultiCompositeImage, stageRoomImage } from './src/services/openaiService';
 import { Product } from './types';
-import Header from './components/Header';
 import ImageUploader from './components/ImageUploader';
 import ObjectCard from './components/ObjectCard';
 import Spinner from './components/Spinner';
@@ -17,9 +16,8 @@ import TouchGhost from './components/TouchGhost';
 import PerspectiveGuideOverlay from './components/PerspectiveGuideOverlay';
 import MeasureOverlay from './components/MeasureOverlay';
 import BeforeAfterModal from './components/BeforeAfterModal';
-import { generateMultiCompositeImage, editProductBackground } from './src/services/geminiService';
 import { ImageWithFallback } from './components/ImageWithFallback';
-import { Ruler, Wand2 } from 'lucide-react';
+import { Menu, Ruler, Wand2 } from 'lucide-react';
 
 type PlacedObjectState = {
  id: string;
@@ -93,6 +91,29 @@ const fileToBase64 = (file: File): Promise<string> => {
  });
 };
 
+const serializePlacedObjects = async (objects: PlacedObjectState[]) => Promise.all(objects.map(async obj => {
+ const imageBase64 = await fileToBase64(obj.image);
+ return {
+ ...obj,
+ imageBase64,
+ thumbnailUrl: imageBase64,
+ image: undefined
+ };
+}));
+
+const hydratePlacedObjects = (serializedObjects: any[], prefix: string): PlacedObjectState[] => {
+ return serializedObjects
+ .filter((obj: any) => obj?.imageBase64)
+ .map((obj: any) => {
+ const image = dataURLtoFile(obj.imageBase64, `${prefix}-${obj.id || Date.now()}.jpeg`);
+ return {
+ ...obj,
+ image,
+ thumbnailUrl: obj.imageBase64
+ };
+ });
+};
+
 const loadingMessages = [
  "Analyzing your product...",
  "Surveying the scene...",
@@ -104,6 +125,7 @@ const loadingMessages = [
 
 type AppMode = 'placement' | 'staging' | 'moodboard';
 type DesignActionMode = 'add' | 'remove';
+const WORKSPACE_HISTORY_CLEAR_KEY = 'interiorCreatorHistoryClearedNav20260624';
 
 const DesignStepGuide: React.FC<{ activeStep: 1 | 2 | 3 }> = ({ activeStep }) => {
  const steps = [
@@ -125,74 +147,146 @@ const DesignStepGuide: React.FC<{ activeStep: 1 | 2 | 3 }> = ({ activeStep }) =>
 };
 
 type WorkspaceControlBarProps = {
- appMode: AppMode;
- setAppMode: (mode: AppMode) => void;
  handleUndo: () => void;
  saveProject: () => void;
  loadProject: () => void;
  onHistoryClick: () => void;
  canUndo: boolean;
  historyCount: number;
+ onNewProject: () => void;
 };
 
 const WorkspaceControlBar: React.FC<WorkspaceControlBarProps> = ({
- appMode,
- setAppMode,
  handleUndo,
  saveProject,
  loadProject,
  onHistoryClick,
  canUndo,
  historyCount,
+ onNewProject,
 }) => {
+ const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+ const runMenuAction = (action: () => void) => {
+ action();
+ setIsMenuOpen(false);
+ };
+
+ return (
+ <section className="ic-control-bar w-full">
+ <nav className="ic-top-nav w-full border-b border-navy-100 bg-white px-4 py-3" aria-label="Global navigation">
+ <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4">
+ <span className="dp-wordmark text-navy-900 text-sm font-bold">Interior Creator</span>
+ <div className="ic-global-links hidden md:flex items-center gap-7">
+ <span className="is-active">Workspace</span>
+ <span>Projects</span>
+ <span>Library</span>
+ <span>Exports</span>
+ </div>
+ <div className="hidden md:flex items-center gap-5">
+ <button type="button" onClick={onNewProject} className="ic-top-action dp-kicker">
+ New Project
+ </button>
+ </div>
+ <div className="relative">
+ <button
+ onClick={() => setIsMenuOpen(open => !open)}
+ className="ic-menu-trigger text-navy-700 hover:text-[#C8A96A] transition-colors"
+ aria-label="Open workspace menu"
+ aria-expanded={isMenuOpen}
+ >
+ <Menu className="h-5 w-5" />
+ </button>
+ {isMenuOpen && (
+ <div className="ic-menu-panel dp-panel" role="menu">
+ <button type="button" role="menuitem" onClick={() => runMenuAction(onHistoryClick)} className="ic-menu-item">
+ History{historyCount > 0 ? ` ${historyCount}` : ''}
+ </button>
+ <button type="button" role="menuitem" onClick={() => runMenuAction(handleUndo)} disabled={!canUndo} className="ic-menu-item">
+ Undo
+ </button>
+ <button type="button" role="menuitem" onClick={() => runMenuAction(saveProject)} className="ic-menu-item">
+ Save
+ </button>
+ <button type="button" role="menuitem" onClick={() => runMenuAction(loadProject)} className="ic-menu-item">
+ Load
+ </button>
+ </div>
+ )}
+ </div>
+ </div>
+ </nav>
+ </section>
+ );
+};
+
+const ModeSelector: React.FC<{ appMode: AppMode; setAppMode: (mode: AppMode) => void }> = ({ appMode, setAppMode }) => {
  const modes: Array<{ label: string; value: AppMode }> = [
- { label: 'Design', value: 'placement' },
- { label: 'Stage', value: 'staging' },
- { label: 'Mood Studio', value: 'moodboard' },
+ { label: 'Design Space', value: 'placement' },
+ { label: 'Stage Listing', value: 'staging' },
+ { label: 'Create Moodboard', value: 'moodboard' },
  ];
 
  return (
- <section className="ic-control-bar fixed left-0 top-0 z-40 w-full">
- <div className="ic-brand-nav w-full h-14 flex items-center justify-between px-5 md:px-6 border-b border-navy-100 bg-white/90 backdrop-blur-md">
- <div className="flex items-center">
- <span className="dp-wordmark text-navy-900 text-sm font-bold tracking-widest">INTERIOR CREATOR</span>
- </div>
- <div className="flex gap-4 items-center">
- <button
- onClick={onHistoryClick}
- className="ic-nav-history-btn dp-kicker bg-transparent text-navy-700 hover:text-[#C8A96A] transition-colors"
- >
- History{historyCount > 0 ? ` ${historyCount}` : ''}
- </button>
- </div>
- </div>
- <div className="dp-panel ic-control-panel mx-auto w-[calc(100%-32px)] max-w-lg text-center">
- <nav className="w-full text-center mx-auto">
- <div className="flex w-full relative justify-center gap-4">
+ <nav className="ic-mode-nav" aria-label="Workspace workflows">
+ <p className="ic-rail-label">Workspace</p>
+ <div className="ic-mode-nav-inner">
  {modes.map((mode) => (
  <button
  key={mode.value}
  onClick={() => setAppMode(mode.value)}
- className={`px-2 md:px-4 py-3 font-bold dp-kicker transition-colors focus:outline-none bg-transparent ${appMode === mode.value ? 'text-[#C8A96A]' : 'text-navy-500 hover:text-[#C8A96A]'}`}
+ className={`ic-workflow-mode ${appMode === mode.value ? 'is-active' : ''}`}
  >
  {mode.label}
  </button>
  ))}
  </div>
  </nav>
- <div className="flex justify-center gap-5 mt-1">
- <button onClick={handleUndo} disabled={!canUndo} className="ic-control-text-btn dp-kicker bg-transparent text-navy-700 hover:text-[#C8A96A] disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
- Undo
- </button>
- <button onClick={saveProject} className="ic-control-text-btn dp-kicker bg-transparent text-navy-700 hover:text-[#C8A96A] transition-colors">
- Save
- </button>
- <button onClick={loadProject} className="ic-control-text-btn dp-kicker bg-transparent text-navy-700 hover:text-[#C8A96A] transition-colors">
- Load
- </button>
+ );
+};
+
+const WorkflowProgress: React.FC<{ appMode: AppMode; activeStep: 1 | 2 | 3; hasScene: boolean; hasProduct: boolean; hasGenerated: boolean }> = ({
+ appMode,
+ activeStep,
+ hasScene,
+ hasProduct,
+ hasGenerated,
+}) => {
+ const designSteps = [
+ { label: 'Room Selected', complete: hasScene, active: activeStep === 1 },
+ { label: 'Product Added', complete: hasProduct, active: activeStep === 2 },
+ { label: 'Composition Ready', complete: hasScene && (hasProduct || activeStep === 3), active: activeStep === 3 },
+ { label: 'Generated', complete: hasGenerated, active: false },
+ { label: 'Exported', complete: false, active: false },
+ ];
+ const stageSteps = [
+ { label: 'Property Selected', complete: hasScene, active: !hasScene },
+ { label: 'Room Selected', complete: hasScene, active: hasScene },
+ { label: 'Style Defined', complete: false, active: hasScene },
+ { label: 'Staged', complete: hasGenerated, active: false },
+ { label: 'Exported', complete: false, active: false },
+ ];
+ const moodSteps = [
+ { label: 'Reference Ready', complete: hasScene, active: !hasScene },
+ { label: 'Products Selected', complete: hasProduct, active: hasScene },
+ { label: 'Theme Defined', complete: false, active: false },
+ { label: 'Concepts Generated', complete: hasGenerated, active: false },
+ { label: 'Exported', complete: false, active: false },
+ ];
+ const steps = appMode === 'placement' ? designSteps : appMode === 'staging' ? stageSteps : moodSteps;
+
+ return (
+ <div className="ic-progress-rail">
+ <p className="ic-rail-label">Project Progress</p>
+ <div className="ic-progress-list">
+ {steps.map((step) => (
+ <div key={step.label} className={`ic-progress-item ${step.complete ? 'is-complete' : ''} ${step.active ? 'is-active' : ''}`}>
+ <span>{step.complete ? '✓' : '○'}</span>
+ <p>{step.label}</p>
+ </div>
+ ))}
  </div>
  </div>
- </section>
  );
 };
 
@@ -246,6 +340,10 @@ const App: React.FC = () => {
   };
   const [workspaceHistory, setWorkspaceHistory] = useState<WorkspaceHistoryEntry[]>([]);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+ const designActiveStep: 1 | 2 | 3 = !sceneImage ? 1 : (designActionMode === 'add' && !productImageFile && placedObjects.length === 0 ? 2 : 3);
+ const activeWorkflowLabel = appMode === 'placement' ? 'Design Space' : appMode === 'staging' ? 'Stage Listing' : 'Create Moodboard';
+ const workspaceStatus = isLoading ? 'Generating' : sceneImage ? 'In Progress' : 'Setup Required';
+ const hasGeneratedOutput = !!debugPrompt || !!moodboardImageUrl || (!!originalSceneImageUrl && sceneImageUrl !== originalSceneImageUrl);
 
  
  // State for touch drag & drop
@@ -302,12 +400,93 @@ const App: React.FC = () => {
  };
  setProductImageFile(file);
  setSelectedProduct(product);
+ if (sceneImage) {
+ setHistory(prev => [...prev, { sceneImage, placedObjects }].slice(-10));
+ setPlacedObjects(prev => [...prev, {
+ id: `${Date.now()}`,
+ image: file,
+ name: file.name,
+ description: file.name,
+ thumbnailUrl: imageUrl,
+ relativePosition: { xPercent: 50, yPercent: 58 },
+ pixelPosition: { x: 0, y: 0 },
+ isVisible: true
+ }]);
+ }
  } catch(err) {
  const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
  setError(`Could not load the product image. Details: ${errorMessage}`);
  console.error(err);
  }
- }, []);
+ }, [sceneImage, placedObjects]);
+
+ const placeProductFromLibrary = useCallback((file: File, name: string) => {
+ const imageUrl = URL.createObjectURL(file);
+ const product: Product = {
+ id: Date.now(),
+ name,
+ imageUrl,
+ };
+ setProductImageFile(file);
+ setSelectedProduct(product);
+ setDesignActionMode('add');
+ if (sceneImage) {
+ setHistory(prev => [...prev, { sceneImage, placedObjects }].slice(-10));
+ setPlacedObjects(prev => [...prev, {
+ id: `${Date.now()}`,
+ image: file,
+ name,
+ description: name,
+ thumbnailUrl: imageUrl,
+ relativePosition: { xPercent: 50, yPercent: 58 },
+ pixelPosition: { x: 0, y: 0 },
+ isVisible: true
+ }]);
+ }
+ }, [sceneImage, placedObjects]);
+
+ const placeProductAtPosition = useCallback((file: File, name: string, position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => {
+ const imageUrl = URL.createObjectURL(file);
+ const product: Product = {
+ id: Date.now(),
+ name,
+ imageUrl,
+ };
+ setProductImageFile(file);
+ setSelectedProduct(product);
+ setDesignActionMode('add');
+ if (sceneImage) {
+ setHistory(prev => [...prev, { sceneImage, placedObjects }].slice(-10));
+ setPlacedObjects(prev => [...prev, {
+ id: `${Date.now()}`,
+ image: file,
+ name,
+ description: name,
+ thumbnailUrl: imageUrl,
+ relativePosition,
+ pixelPosition: position,
+ isVisible: true
+ }]);
+ }
+ }, [sceneImage, placedObjects]);
+
+ const handleLibraryProductDrop = useCallback(async (
+ product: { url: string; name: string },
+ position: {x: number, y: number},
+ relativePosition: { xPercent: number; yPercent: number; }
+ ) => {
+ setIsLoading(true);
+ setError(null);
+ try {
+ const file = await fetchUrlToFile(product.url, `${product.name}.jpg`);
+ placeProductAtPosition(file, product.name, position, relativePosition);
+ } catch (err) {
+ setError(`Failed to place ${product.name} from library.`);
+ console.error(err);
+ } finally {
+ setIsLoading(false);
+ }
+ }, [placeProductAtPosition]);
 
  const handleSelectFromLibrary = useCallback(async (url: string, name: string, type: 'product' | 'scene') => {
  setIsLoading(true);
@@ -315,7 +494,7 @@ const App: React.FC = () => {
  try {
  const file = await fetchUrlToFile(url, `${name}.jpg`);
  if (type === 'product') {
- handleProductImageUpload(file);
+ placeProductFromLibrary(file, name);
  } else {
  setSceneImage(file);
  }
@@ -325,7 +504,7 @@ const App: React.FC = () => {
  } finally {
  setIsLoading(false);
  }
- }, [handleProductImageUpload]);
+ }, [placeProductFromLibrary]);
 
  const handleInstantStart = useCallback(async () => {
  setError(null);
@@ -364,11 +543,7 @@ const App: React.FC = () => {
     if (!sceneImg) return;
     try {
       const sceneBase64 = await fileToBase64(sceneImg);
-      const serializedObjects = await Promise.all(objects.map(async obj => ({
-        ...obj,
-        imageBase64: await fileToBase64(obj.image),
-        image: undefined
-      })));
+      const serializedObjects = await serializePlacedObjects(objects);
       
       const newEntry = { id: Date.now(), sceneBase64, serializedObjects };
       setWorkspaceHistory(prev => {
@@ -388,10 +563,7 @@ const App: React.FC = () => {
   const loadWorkspaceHistoryEntry = useCallback((entry: WorkspaceHistoryEntry) => {
     const file = dataURLtoFile(entry.sceneBase64, 'history-' + entry.id + '.jpeg');
     setSceneImage(file);
-    const loadedObjects = entry.serializedObjects.map((obj: any) => ({
-      ...obj,
-      image: dataURLtoFile(obj.imageBase64, 'history-obj-' + entry.id + '.jpeg')
-    }));
+    const loadedObjects = hydratePlacedObjects(entry.serializedObjects, 'history-obj-' + entry.id);
     setPlacedObjects(loadedObjects);
     setIsHistoryModalOpen(false);
   }, []);
@@ -408,11 +580,7 @@ const App: React.FC = () => {
  const performSave = async (silent = false) => {
  try {
  const sceneBase64 = sceneImage ? await fileToBase64(sceneImage) : null;
- const serializedObjects = await Promise.all(placedObjects.map(async obj => ({
- ...obj,
- imageBase64: await fileToBase64(obj.image),
- image: undefined
- })));
+ const serializedObjects = await serializePlacedObjects(placedObjects);
  const stateToSave = {
  appMode,
  stagingPrompt,
@@ -431,6 +599,7 @@ const App: React.FC = () => {
 
  useEffect(() => {
  const interval = setInterval(() => {
+ if (!sceneImage && placedObjects.length === 0 && !stagingPrompt.trim()) return;
  performSave(true);
  }, 30000);
  return () => clearInterval(interval);
@@ -439,29 +608,17 @@ const App: React.FC = () => {
 
  useEffect(() => {
  try {
- const savedData = localStorage.getItem('interiorCreatorWorkspace');
+ if (localStorage.getItem(WORKSPACE_HISTORY_CLEAR_KEY) !== 'true') {
+ localStorage.removeItem('interiorCreatorHistory');
+ localStorage.setItem(WORKSPACE_HISTORY_CLEAR_KEY, 'true');
+ setWorkspaceHistory([]);
+ }
       const savedHistory = localStorage.getItem('interiorCreatorHistory');
       if (savedHistory) {
         setWorkspaceHistory(JSON.parse(savedHistory));
       }
- if (savedData) {
- const state = JSON.parse(savedData);
- setAppMode(state.appMode || 'placement');
- setStagingPrompt(state.stagingPrompt || '');
- if (state.sceneBase64) {
- const file = dataURLtoFile(state.sceneBase64, `loaded-scene-${Date.now()}.jpeg`);
- setSceneImage(file);
- }
- if (state.serializedObjects) {
- const loadedObjects = state.serializedObjects.map((obj: any) => ({
- ...obj,
- image: dataURLtoFile(obj.imageBase64, `loaded-object-${Date.now()}.jpeg`)
- }));
- setPlacedObjects(loadedObjects);
- }
- }
  } catch (err) {
- console.error('Failed to auto-load workspace', err);
+ console.error('Failed to load workspace history', err);
  }
  }, []);
 
@@ -483,10 +640,7 @@ const App: React.FC = () => {
  }
  
  if (state.serializedObjects) {
- const loadedObjects = state.serializedObjects.map((obj: any) => ({
- ...obj,
- image: dataURLtoFile(obj.imageBase64, `loaded-object-${Date.now()}.jpeg`)
- }));
+ const loadedObjects = hydratePlacedObjects(state.serializedObjects, `loaded-object-${Date.now()}`);
  setPlacedObjects(loadedObjects);
  }
  
@@ -505,7 +659,12 @@ const App: React.FC = () => {
  const handleProductDrop = useCallback((position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => {
  if (navigator.vibrate) navigator.vibrate(50);
  if (!productImageFile || !sceneImage || !selectedProduct) {
- setError('An unexpected error occurred. Please try again.');
+ console.warn('Placement ignored because the room or selected product is missing.', {
+ hasProductFile: !!productImageFile,
+ hasSceneImage: !!sceneImage,
+ hasSelectedProduct: !!selectedProduct,
+ });
+ setDesignActionMode('add');
  return;
  }
  setHistory(prev => [...prev, { sceneImage, placedObjects }].slice(-10));
@@ -682,7 +841,7 @@ Return only the cleaned final room image.
  }, []);
 
  const handleStagingSubmit = useCallback(async () => {
- if (!sceneImage || !stagingPrompt.trim()) return;
+ if (!sceneImage || (!stagingPrompt.trim() && !placedObjects.some(obj => obj.isVisible !== false))) return;
  
  if (!originalSceneImageUrl && sceneImageUrl) {
  setOriginalSceneImageUrl(sceneImageUrl);
@@ -691,12 +850,33 @@ Return only the cleaned final room image.
  setIsLoading(true);
  setError(null);
  try {
- let fullPrompt = stagingPrompt;
+ let fullPrompt = stagingPrompt.trim() || 'Composite the selected products into the room naturally for a polished real estate listing preview.';
  if (stagingKeepItems.trim() !== '') {
  fullPrompt += `\n**Items to carefully KEEP**: ${stagingKeepItems}`;
  }
  if (stagingRemoveItems.trim() !== '') {
  fullPrompt += `\n**Items to definitely REMOVE**: ${stagingRemoveItems}`;
+ }
+ if (placedObjects.some(obj => obj.isVisible !== false)) {
+ const activeObjects = placedObjects.filter(obj => obj.isVisible !== false).map(obj => ({
+ image: obj.image,
+ description: `${obj.description}. Stage listing direction: ${fullPrompt}`,
+ relativePosition: obj.relativePosition,
+ scale: obj.scale,
+ rotation: obj.rotation
+ }));
+ const { finalImageUrl, finalPrompt } = await generateMultiCompositeImage(
+ activeObjects,
+ sceneImage,
+ fullPrompt
+ );
+ const newSceneFile = dataURLtoFile(finalImageUrl, `staged-composite-${Date.now()}.jpeg`);
+ setSceneImage(newSceneFile);
+ setPlacedObjects([]);
+ setDebugImageUrl(null);
+ saveIterationToHistory(newSceneFile, []);
+ setDebugPrompt(finalPrompt);
+ return;
  }
  const { finalImageUrl, finalPrompt } = await stageRoomImage(sceneImage, fullPrompt);
  const newSceneFile = dataURLtoFile(finalImageUrl, `staged-scene-${Date.now()}.jpeg`);
@@ -711,7 +891,7 @@ Return only the cleaned final room image.
  } finally {
  setIsLoading(false);
  }
- }, [sceneImage, stagingPrompt, stagingKeepItems, stagingRemoveItems, sceneImageUrl, originalSceneImageUrl]);
+ }, [sceneImage, stagingPrompt, stagingKeepItems, stagingRemoveItems, sceneImageUrl, originalSceneImageUrl, placedObjects]);
  
  const handleMoodboardSubmit = useCallback(async () => {
  if (moodboardSelectedProducts.length === 0 || !moodboardPrompt.trim()) return;
@@ -719,7 +899,7 @@ Return only the cleaned final room image.
  setIsLoading(true);
  setError(null);
  try {
- const { finalImageUrl, finalPrompt } = await import('./src/services/geminiService').then(m => m.generateMoodboard(moodboardSelectedProducts, moodboardPrompt));
+ const { finalImageUrl, finalPrompt } = await generateMoodboard(moodboardSelectedProducts, moodboardPrompt);
  setMoodboardImageUrl(finalImageUrl);
  setDebugPrompt(finalPrompt);
  } catch (err) {
@@ -800,7 +980,7 @@ Return only the cleaned final room image.
  setTouchGhostPosition({ x: touch.clientX, y: touch.clientY });
  
  const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
- const dropZone = elementUnderTouch?.closest<HTMLDivElement>('[data-dropzone-id="scene-uploader"]');
+ const dropZone = elementUnderTouch?.closest<HTMLDivElement>('[data-scene-dropzone="true"]');
 
  if (dropZone) {
  const rect = dropZone.getBoundingClientRect();
@@ -817,7 +997,7 @@ Return only the cleaned final room image.
  
  const touch = e.changedTouches[0];
  const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
- const dropZone = elementUnderTouch?.closest<HTMLDivElement>('[data-dropzone-id="scene-uploader"]');
+ const dropZone = elementUnderTouch?.closest<HTMLDivElement>('[data-scene-dropzone="true"]');
 
  if (dropZone && sceneImgRef.current) {
  const img = sceneImgRef.current;
@@ -876,11 +1056,11 @@ Return only the cleaned final room image.
  const renderContent = () => {
  const renderLibraryGrid = (
  items: {id: number | string, name: string, thumbnailUrl?: string, imageUrl?: string, category?: string, type?: string, price?: string, brand?: string}[],
- type: 'product' | 'design-room' | 'stage-room',
+ type: 'product' | 'mood-product' | 'design-room' | 'stage-room',
  label: string
  ) => {
  let filteredItems = items;
- if (type === 'product' && activeCategory !== 'All') {
+ if ((type === 'product' || type === 'mood-product') && activeCategory !== 'All') {
  filteredItems = items.filter(item => item.category === activeCategory);
  } else if (type === 'design-room' && activeDesignRoomCategory !== 'All') {
  filteredItems = items.filter(item => item.type === activeDesignRoomCategory);
@@ -893,7 +1073,7 @@ Return only the cleaned final room image.
  <div className="mt-4 w-full">
  <p className="dp-library-label">{label}</p>
  
- {type === 'product' && (
+ {(type === 'product' || type === 'mood-product') && (
  <div className="dp-filter-row">
  {['All', ...Array.from(new Set(items.map(item => item.category).filter(Boolean) as string[]))].map(cat => (
  <button
@@ -936,22 +1116,42 @@ Return only the cleaned final room image.
  )}
 
  <div className="dp-room-grid">
- {filteredItems.map(item => (
+ {filteredItems.map(item => {
+ const assetUrl = (item.thumbnailUrl || item.imageUrl) as string;
+ const isMoodSelected = type === 'mood-product' && moodboardSelectedProducts.some(p => p.url === assetUrl);
+ return (
+ <div key={item.id} className="dp-library-item">
  <button
- key={item.id}
- onClick={() => handleSelectFromLibrary((item.thumbnailUrl || item.imageUrl) as string, item.name, selectionType)}
+ onClick={() => {
+ if (type === 'mood-product') {
+ setMoodboardSelectedProducts(prev => {
+ const exists = prev.some(p => p.url === assetUrl);
+ return exists ? prev.filter(p => p.url !== assetUrl) : [...prev, { name: item.name, url: assetUrl }];
+ });
+ return;
+ }
+ handleSelectFromLibrary(assetUrl, item.name, selectionType);
+ }}
+ draggable={type === 'product'}
+ onDragStart={(event) => {
+ if (type !== 'product') return;
+ event.dataTransfer.effectAllowed = 'copy';
+ event.dataTransfer.setData('text/plain', `library-product:${encodeURIComponent(assetUrl)}|${encodeURIComponent(item.name)}`);
+ }}
  disabled={isLoading}
- className="dp-room-card group"
+ className={`dp-room-card group ${isMoodSelected ? 'is-selected' : ''}`}
+ aria-label={`${type === 'product' ? 'Place' : isMoodSelected ? 'Remove' : 'Select'} ${item.name}`}
+ title={item.name}
  >
- {type === 'product' ? (
- <ImageWithFallback src={(item.thumbnailUrl || item.imageUrl) as string} productName={item.name} productId={String(item.id)} className="dp-room-card-image" alt={item.name} />
+ {type === 'product' || type === 'mood-product' ? (
+ <ImageWithFallback src={assetUrl} productName={item.name} productId={String(item.id)} className="dp-room-card-image" alt={item.name} />
  ) : (
- <img src={item.thumbnailUrl || item.imageUrl} alt={item.name} className="dp-room-card-image" />
+ <img src={assetUrl} alt={item.name} className="dp-room-card-image" />
  )}
- <span className="dp-room-card-static-title">{item.name}</span>
- 
  </button>
- ))}
+ <span className="dp-room-card-caption">{item.name}</span>
+ </div>
+ )})}
  </div>
  </div>
  );
@@ -984,7 +1184,7 @@ Return only the cleaned final room image.
  onFileSelect={setSceneImage}
  imageUrl={sceneImageUrl}
  />
- {renderLibraryGrid(STAGE_ROOM_LIBRARY, 'stage-room', 'Stage Room Library')}
+ {renderLibraryGrid(STAGE_ROOM_LIBRARY, 'stage-room', 'Rooms')}
  </div>
  <p className="dp-soft mt-6 text-center">Upload an empty or partially empty room to begin staging.</p>
  </div>
@@ -992,7 +1192,9 @@ Return only the cleaned final room image.
  }
 
  return (
- <div className="w-full max-w-4xl mx-auto animate-fade-in flex flex-col items-center">
+ <div className="w-full animate-fade-in">
+ <div className="ic-editor-layout">
+ <section className="ic-canvas-panel">
  <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-5 text-navy-900 dp-editorial-headline">Room <span className="text-[#C8A96A]">Scene</span></h2>
  <div className="w-full mb-6 relative">
   <ImageUploader 
@@ -1001,9 +1203,16 @@ Return only the cleaned final room image.
  className="ic-scene-frame"
  onFileSelect={setSceneImage} 
  imageUrl={sceneImageUrl}
- isDropZone={false}
+ isDropZone={!!sceneImage && !isLoading}
+ onProductDrop={handleProductDrop}
+ onObjectMove={handleObjectMove}
+ onLibraryProductDrop={handleLibraryProductDrop}
+ showPerspectiveGrid={isMouseDraggingProduct || isTouchDragging}
  showDebugButton={!!debugPrompt && !isLoading}
  onDebugClick={() => setIsDebugModalOpen(true)}
+ isTouchHovering={isHoveringDropZone}
+ touchOrbPosition={touchOrbPosition}
+ placedObjects={placedObjects.filter(o => o.isVisible !== false)}
   />
   <MeasureOverlay isActive={isMeasureMode} onClose={() => setIsMeasureMode(false)} />
  <div className="text-center mt-3 flex flex-col justify-center items-center gap-3">
@@ -1054,8 +1263,6 @@ Return only the cleaned final room image.
  )}
  </div>
  </div>
-
- {renderLibraryGrid(STAGE_ROOM_LIBRARY, 'stage-room', 'Stage Room Library')}
 
  <div className="ic-stage-panel w-full dp-panel p-4 flex flex-col gap-3 mt-4">
  <div className="flex flex-col gap-2">
@@ -1114,7 +1321,7 @@ Return only the cleaned final room image.
  </div>
  <button
  onClick={handleStagingSubmit}
- disabled={isLoading || !stagingPrompt.trim()}
+ disabled={isLoading || (!stagingPrompt.trim() && !placedObjects.some(obj => obj.isVisible !== false))}
  className="ic-stage-submit dp-kicker"
  >
  {isLoading ? 'Staging Room...' : 'Stage Room'}
@@ -1129,16 +1336,22 @@ Return only the cleaned final room image.
  </div>
  )}
  </div>
+ </section>
+ <aside className="ic-asset-panel">
+ <p className="dp-soft text-center text-sm mb-3">Tap or drag products onto the room. Switch rooms below.</p>
+ {renderLibraryGrid(PRODUCT_LIBRARY, 'product', 'Products')}
+ {renderLibraryGrid(STAGE_ROOM_LIBRARY, 'stage-room', 'Rooms')}
+ </aside>
+ </div>
  </div>
  );
  }
 
- if (!sceneImage) {
+ if (appMode === 'placement' && !sceneImage) {
  return (
  <div className="w-full max-w-4xl mx-auto animate-fade-in flex flex-col gap-5">
- <DesignStepGuide activeStep={1} />
  <div className="ic-workflow-panel flex flex-col">
- <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-4 text-navy-900 dp-editorial-headline">Start With The <span className="text-[#C8A96A]">Room Scene</span></h2>
+ <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-4 text-navy-900 dp-editorial-headline">Start With <span className="text-[#C8A96A]">Room Scene</span></h2>
  <ImageUploader 
  id="scene-uploader"
  className="ic-scene-frame"
@@ -1148,11 +1361,11 @@ Return only the cleaned final room image.
  }}
  imageUrl={sceneImageUrl}
  />
- {renderLibraryGrid(DESIGN_ROOM_LIBRARY, 'design-room', 'Design Room Library')}
+ {renderLibraryGrid(DESIGN_ROOM_LIBRARY, 'design-room', 'Rooms')}
  </div>
  <div className="text-center mt-2 min-h-[3rem] flex flex-col justify-center items-center">
  <p className="dp-soft animate-fade-in">
- Choose or upload a room first, then add furniture or remove an item.
+ Choose or upload a room, then add products or remove an item.
  </p>
  <p className="dp-soft animate-fade-in mt-2">
  Or click{' '}
@@ -1169,11 +1382,10 @@ Return only the cleaned final room image.
  );
  }
 
- if (sceneImage && designActionMode === 'remove') {
+ if (appMode === 'placement' && sceneImage && designActionMode === 'remove') {
  return (
  <div className="w-full max-w-5xl mx-auto animate-fade-in flex flex-col gap-5">
- <DesignStepGuide activeStep={3} />
- <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-1 text-navy-900 dp-editorial-headline">Edit This <span className="text-[#C8A96A]">Room Scene</span></h2>
+ <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-1 text-navy-900 dp-editorial-headline">Edit <span className="text-[#C8A96A]">Room Scene</span></h2>
  <ImageUploader 
  ref={sceneImgRef}
  id="scene-uploader-remove"
@@ -1183,11 +1395,18 @@ Return only the cleaned final room image.
  setOriginalSceneImageUrl(URL.createObjectURL(file));
  }}
  imageUrl={sceneImageUrl}
- isDropZone={false}
+ isDropZone={!!sceneImage && !isLoading}
+ onScenePointSelect={(position, relativePosition) => {
+ setPersistedOrbPosition(position);
+ setRemovePrompt(`Remove the item located around ${Math.round(relativePosition.xPercent)}% from the left and ${Math.round(relativePosition.yPercent)}% from the top of the room image.`);
+ }}
+ showPerspectiveGrid={isMouseDraggingProduct || isTouchDragging}
  showDebugButton={!!debugPrompt && !isLoading}
  onDebugClick={() => setIsDebugModalOpen(true)}
+ isTouchHovering={isHoveringDropZone}
+ touchOrbPosition={touchOrbPosition}
+ placedObjects={placedObjects.filter(o => o.isVisible !== false)}
  />
- {renderLibraryGrid(DESIGN_ROOM_LIBRARY, 'design-room', 'Design Room Library')}
  <div className="ic-stage-panel w-full dp-panel p-4 flex flex-col gap-3">
  <div className="flex items-center justify-center gap-5">
  <button
@@ -1216,7 +1435,7 @@ Return only the cleaned final room image.
  disabled={isLoading || !removePrompt.trim()}
  className="ic-stage-submit dp-kicker"
  >
- {isLoading ? 'Updating Scene...' : 'Generate Clean Room'}
+ {isLoading ? 'Updating...' : 'Generate Clean Room'}
  </button>
  </div>
  <div className="text-center mt-2 min-h-[3rem] flex flex-col justify-center items-center">
@@ -1230,19 +1449,23 @@ Return only the cleaned final room image.
  onClick={handleChangeScene}
  className="text-sm text-gold-600 hover:text-gold-700 font-semibold transition-colors dp-btn-text"
  >
- Change Room Scene
+ Change Room
  </button>
  )}
+ </div>
+ <div className="ic-secondary-library">
+ {renderLibraryGrid(DESIGN_ROOM_LIBRARY, 'design-room', 'Rooms')}
  </div>
  </div>
  );
  }
 
- if (sceneImage && designActionMode === 'add' && !productImageFile && placedObjects.length === 0) {
+ if (appMode === 'placement' && sceneImage && designActionMode === 'add' && !productImageFile && placedObjects.length === 0) {
  return (
- <div className="w-full max-w-5xl mx-auto animate-fade-in flex flex-col gap-5">
- <DesignStepGuide activeStep={2} />
- <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-1 text-navy-900 dp-editorial-headline">Edit This <span className="text-[#C8A96A]">Room Scene</span></h2>
+ <div className="w-full animate-fade-in flex flex-col gap-4">
+ <div className="ic-editor-layout">
+ <section className="ic-canvas-panel">
+ <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-1 text-navy-900 dp-editorial-headline">Room <span className="text-[#C8A96A]">Canvas</span></h2>
  <ImageUploader 
  id="scene-uploader-add-product"
  className="ic-scene-frame"
@@ -1251,10 +1474,25 @@ Return only the cleaned final room image.
  setOriginalSceneImageUrl(URL.createObjectURL(file));
  }}
  imageUrl={sceneImageUrl}
- isDropZone={false}
+ isDropZone={!!sceneImage && !isLoading}
+ onProductDrop={handleProductDrop}
+ onObjectMove={handleObjectMove}
+ onLibraryProductDrop={handleLibraryProductDrop}
+ showPerspectiveGrid={isMouseDraggingProduct || isTouchDragging}
+ isTouchHovering={isHoveringDropZone}
+ touchOrbPosition={touchOrbPosition}
+ placedObjects={placedObjects.filter(o => o.isVisible !== false)}
  />
- {renderLibraryGrid(DESIGN_ROOM_LIBRARY, 'design-room', 'Design Room Library')}
- <div className="ic-stage-panel w-full dp-panel p-4 flex flex-col gap-3">
+ <div className="text-center mt-2">
+ <button
+ onClick={handleChangeScene}
+ className="text-sm text-gold-600 hover:text-gold-700 font-semibold transition-colors dp-btn-text"
+ >
+ Change Room
+ </button>
+ </div>
+ </section>
+ <aside className="ic-asset-panel">
  <div className="flex items-center justify-center gap-5">
  <button
  onClick={() => setDesignActionMode('add')}
@@ -1270,21 +1508,14 @@ Return only the cleaned final room image.
  </button>
  </div>
  <h2 className="dp-editorial-headline font-medium text-2xl text-center mb-1 text-navy-900 dp-editorial-headline">Select Furniture <span className="text-[#C8A96A]">To Add</span></h2>
- <p className="dp-soft text-center text-sm">Upload a product or choose one from the library. You can drag it around the room before generating.</p>
+ <p className="dp-soft text-center text-sm">Tap a product to place it directly on the room. Move it on the canvas before generating.</p>
  <ImageUploader 
  id="product-uploader"
  onFileSelect={handleProductImageUpload}
  imageUrl={productImageUrl}
  />
- {renderLibraryGrid(PRODUCT_LIBRARY, 'product', 'Product Library')}
- </div>
- <div className="text-center mt-2">
- <button
- onClick={handleChangeScene}
- className="text-sm text-gold-600 hover:text-gold-700 font-semibold transition-colors dp-btn-text"
- >
- Change Room Scene
- </button>
+ {renderLibraryGrid(PRODUCT_LIBRARY, 'product', 'Products')}
+ </aside>
  </div>
  </div>
  );
@@ -1293,7 +1524,7 @@ Return only the cleaned final room image.
  if (appMode === 'moodboard') {
  return (
  <div className="w-full max-w-4xl mx-auto animate-fade-in flex flex-col items-center">
- <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-5 text-navy-900 dp-editorial-headline">Create A <span className="text-[#C8A96A]">Mood Board</span></h2>
+ <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-5 text-navy-900 dp-editorial-headline">Create <span className="text-[#C8A96A]">Moodboard</span></h2>
  {sceneImage && (
  <div className="w-full mb-3">
  <ImageUploader 
@@ -1301,55 +1532,34 @@ Return only the cleaned final room image.
  className="ic-scene-frame"
  onFileSelect={setSceneImage}
  imageUrl={sceneImageUrl}
- isDropZone={false}
+ isDropZone={!!sceneImage && !isLoading}
+ onProductDrop={handleProductDrop}
+ onObjectMove={handleObjectMove}
+ onLibraryProductDrop={handleLibraryProductDrop}
+ showPerspectiveGrid={isMouseDraggingProduct || isTouchDragging}
+ isTouchHovering={isHoveringDropZone}
+ touchOrbPosition={touchOrbPosition}
+ placedObjects={placedObjects.filter(o => o.isVisible !== false)}
  />
  </div>
  )}
- {renderLibraryGrid(DESIGN_ROOM_LIBRARY, 'design-room', 'Mood Studio Room Library')}
- 
- <div className="w-full flex flex-col md:flex-row gap-5 md:gap-8">
+ <div className="ic-mobile-section w-full flex flex-col md:flex-row gap-4 md:gap-6">
  {/* Left side: Product Selection */}
- <div className="w-full md:w-1/2 flex flex-col gap-3">
- <h3 className="text-lg font-bold dp-editorial-headline">1. Select Products</h3>
- <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-2 scrollbar-hide">
- {PRODUCT_LIBRARY.map(item => {
- const isSelected = moodboardSelectedProducts.some(p => p.url === item.thumbnailUrl);
- return (
- <button
- key={item.id}
- onClick={() => {
- if (isSelected) {
- setMoodboardSelectedProducts(prev => prev.filter(p => p.url !== item.thumbnailUrl));
- } else {
- setMoodboardSelectedProducts(prev => [...prev, { name: item.name, url: item.thumbnailUrl }]);
- }
- }}
- className={`group relative dp-radius overflow-hidden aspect-video outline-none transition-all ${isSelected ? 'ring-4 ring-gold-500 border-2 border-navy-900 border-opacity-20' : 'focus:ring-2 focus:ring-gold-500'}`}
- >
- <ImageWithFallback src={item.thumbnailUrl} productName={item.name} productId={String(item.id)} className="w-full h-full object-cover" alt={item.name} />
- <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
- <span className="text-white text-xs font-bold px-2 text-center">{isSelected ? 'Remove' : 'Select'}</span>
- </div>
- {isSelected && (
- <div className="absolute top-2 right-2 bg-gold-500 text-white dp-radius p-1 ">
- <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
- </div>
- )}
- </button>
- );
- })}
- </div>
- <p className="text-sm text-navy-400 font-medium">Selected: {moodboardSelectedProducts.length} items</p>
+ <div className="ic-mobile-section w-full md:w-1/2 flex flex-col gap-3">
+ <h3 className="ic-editorial-step-title">Select Products</h3>
+ {renderLibraryGrid(PRODUCT_LIBRARY, 'mood-product', 'Products')}
+ <p className="dp-kicker text-navy-500">Selected: {moodboardSelectedProducts.length} items</p>
+ {renderLibraryGrid(DESIGN_ROOM_LIBRARY, 'design-room', 'Rooms')}
  </div>
  
  {/* Right side: Generation */}
- <div className="ic-theme-panel w-full md:w-1/2 flex flex-col gap-3 dp-panel p-4">
- <h3 className="text-lg font-bold dp-editorial-headline">2. Describe Theme</h3>
+ <div className="ic-theme-panel ic-mobile-section w-full md:w-1/2 flex flex-col gap-3 dp-panel p-4">
+ <h3 className="ic-editorial-step-title">Describe Theme</h3>
  <div className="flex flex-col gap-2">
  <div className="flex flex-wrap gap-2 mb-2">
- <button onClick={() => setMoodboardPrompt("Warm minimalist, earthy tones, organic textures, sophisticated and serene")} className="px-4 h-11 bg-transparent border border-navy-200/50 text-navy-600 dp-radius text-xs font-semibold hover:bg-black/5 hover:text-navy-900 transition-colors">Warm Minimal</button>
- <button onClick={() => setMoodboardPrompt("Moody editorial, dark walls, brass accents, rich deep colors, cinematic lighting")} className="px-4 h-11 bg-transparent border border-navy-200/50 text-navy-600 dp-radius text-xs font-semibold hover:bg-black/5 hover:text-navy-900 transition-colors">Moody Editorial</button>
- <button onClick={() => setMoodboardPrompt("Airy coastal, light blues and whites, breezy linens, natural light")} className="px-4 h-11 bg-transparent border border-navy-200/50 text-navy-600 dp-radius text-xs font-semibold hover:bg-black/5 hover:text-navy-900 transition-colors">Coastal</button>
+ <button onClick={() => setMoodboardPrompt("Warm minimalist, earthy tones, organic textures, sophisticated and serene")} className="ic-mood-chip">Warm Minimal</button>
+ <button onClick={() => setMoodboardPrompt("Moody editorial, dark walls, brass accents, rich deep colors, cinematic lighting")} className="ic-mood-chip">Moody Editorial</button>
+ <button onClick={() => setMoodboardPrompt("Airy coastal, light blues and whites, breezy linens, natural light")} className="ic-mood-chip">Coastal</button>
  </div>
  <textarea 
  value={moodboardPrompt}
@@ -1378,7 +1588,7 @@ Return only the cleaned final room image.
  
  {!isLoading && moodboardImageUrl && (
  <div className="mt-5 border-t border-navy-100 pt-5 w-full flex flex-col items-center animate-fade-in">
- <h3 className="text-xl dp-editorial-headline dp-editorial-headline">Generated Mood Board</h3>
+ <h3 className="ic-editorial-step-title text-center mb-3">Generated Mood Board</h3>
  <div className="dp-radius overflow-hidden relative w-full aspect-square md:aspect-video dp-panel">
  <img src={moodboardImageUrl} className="w-full h-full object-contain" alt="Generated Mood Board" />
  </div>
@@ -1408,12 +1618,25 @@ Return only the cleaned final room image.
 
  return (
  <div className="w-full max-w-7xl mx-auto animate-fade-in">
- <DesignStepGuide activeStep={3} />
  <div className="flex flex-col lg:flex-row gap-5 lg:gap-7 items-start">
  {/* Scene Column */}
  <div className="w-full lg:w-2/3 flex flex-col order-1 pb-5">
  <h2 className="dp-editorial-headline font-medium text-3xl text-center mb-5 text-navy-900 dp-editorial-headline">Your Room <span className="text-[#C8A96A]">Preview</span></h2>
- <p className="dp-soft text-center text-sm mb-3">Drag or tap the room to move the product into position, then generate the new scene.</p>
+ <p className="dp-soft text-center text-sm mb-3">Tap or drag products onto the room. Move items on the image before generating.</p>
+ <div className="ic-mode-inline flex items-center justify-center gap-5 mb-3">
+ <button
+ onClick={() => setDesignActionMode('add')}
+ className={`dp-kicker transition-colors ${designActionMode === 'add' ? 'text-[#C8A96A]' : 'text-navy-500 hover:text-[#C8A96A]'}`}
+ >
+ Add Item
+ </button>
+ <button
+ onClick={() => setDesignActionMode('remove')}
+ className={`dp-kicker transition-colors ${designActionMode === 'remove' ? 'text-[#C8A96A]' : 'text-navy-500 hover:text-[#C8A96A]'}`}
+ >
+ Remove Item
+ </button>
+ </div>
  <div className="flex-grow flex flex-col items-center justify-center relative w-full">
   <ImageUploader 
  ref={sceneImgRef}
@@ -1428,6 +1651,7 @@ Return only the cleaned final room image.
  isDropZone={!!sceneImage && !isLoading}
  onProductDrop={handleProductDrop}
  onObjectMove={handleObjectMove}
+ onLibraryProductDrop={handleLibraryProductDrop}
  showPerspectiveGrid={isMouseDraggingProduct || isTouchDragging}
  showDebugButton={!!debugImageUrl && !isLoading}
  onDebugClick={() => setIsDebugModalOpen(true)}
@@ -1488,7 +1712,6 @@ Return only the cleaned final room image.
  </div>
  )}
  </div>
- {renderLibraryGrid(DESIGN_ROOM_LIBRARY, 'design-room', 'Design Room Library')}
  <div className="text-center mt-3">
  {sceneImage && !isLoading && (
  <button
@@ -1503,6 +1726,7 @@ Return only the cleaned final room image.
 
  {/* Right Sidebar */}
  <div className="w-full lg:w-1/3 flex flex-col order-2 lg:sticky lg:top-[120px] gap-5 pb-5">
+ {renderLibraryGrid(PRODUCT_LIBRARY, 'product', 'Products')}
  {/* Product Column */}
  {selectedProduct && (
  <div className="ic-selected-item-panel w-full flex flex-col dp-panel p-4">
@@ -1724,7 +1948,7 @@ Return only the cleaned final room image.
  </div>
  ) : (
  <p className="text-navy-400 animate-fade-in">
- Drag the product onto a location in the scene, or simply click where you want it.
+ Select products from the asset panel, then move placed items directly on the room.
  </p>
  )}
  </div>
@@ -1745,28 +1969,81 @@ Return only the cleaned final room image.
  position={touchGhostPosition}
  />
  <div className="flex flex-col items-center w-full">
- <Header />
- 
  <WorkspaceControlBar
- appMode={appMode}
- setAppMode={setAppMode}
  handleUndo={handleUndo}
  saveProject={saveProject}
  loadProject={loadProject}
  onHistoryClick={() => setIsHistoryModalOpen(true)}
  canUndo={history.length > 0}
  historyCount={workspaceHistory.length}
+ onNewProject={handleReset}
  />
 
  <main className="ic-main-content w-full">
+ <section className="ic-workspace-shell">
+ <aside className="ic-left-rail">
+ <WorkflowProgress
+ appMode={appMode}
+ activeStep={designActiveStep}
+ hasScene={!!sceneImage}
+ hasProduct={!!productImageFile || placedObjects.length > 0 || moodboardSelectedProducts.length > 0}
+ hasGenerated={hasGeneratedOutput}
+ />
+ </aside>
+ <section className="ic-workspace-main">
+ <div className="ic-project-header">
+ <div>
+ <p className="ic-rail-label">Project</p>
+ <h1>{activeWorkflowLabel}</h1>
+ </div>
+ <div className="ic-project-status">
+ <span>{workspaceStatus}</span>
+ <button
+ type="button"
+ onClick={() => {
+ if (appMode === 'placement' && placedObjects.length > 0) handleGenerateComposition();
+ if (appMode === 'staging') handleStagingSubmit();
+ if (appMode === 'moodboard') handleMoodboardSubmit();
+ }}
+ disabled={isLoading || (appMode === 'placement' && placedObjects.length === 0) || (appMode === 'staging' && !stagingPrompt.trim() && !placedObjects.some(obj => obj.isVisible !== false)) || (appMode === 'moodboard' && (moodboardSelectedProducts.length === 0 || !moodboardPrompt.trim()))}
+ className="ic-primary-action"
+ >
+ Generate
+ </button>
+ </div>
+ </div>
+ <ModeSelector appMode={appMode} setAppMode={setAppMode} />
  {renderContent()}
+ </section>
+ <aside className="ic-context-rail">
+ <p className="ic-rail-label">Status</p>
+ <div className="ic-status-list">
+ <div>
+ <span>Current workflow</span>
+ <strong>{activeWorkflowLabel}</strong>
+ </div>
+ <div>
+ <span>Room</span>
+ <strong>{sceneImage ? 'Selected' : 'Not selected'}</strong>
+ </div>
+ <div>
+ <span>Assets</span>
+ <strong>{placedObjects.length || moodboardSelectedProducts.length || (productImageFile ? 1 : 0)}</strong>
+ </div>
+ <div>
+ <span>Output</span>
+ <strong>{hasGeneratedOutput ? 'Ready' : 'Pending'}</strong>
+ </div>
+ </div>
+ </aside>
+ </section>
  </main>
  </div>
  
 {isBgEditing || editingProductBgId ? (
   <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
     <div className="bg-white dp-radius max-w-md w-full p-6 animate-fade-up">
-      <h3 className="text-xl font-bold text-navy-900 mb-4">Edit Product Background</h3>
+      <h3 className="ic-editorial-step-title mb-4">Edit Product Background</h3>
       {isBgEditing ? (
         <div className="py-8 flex flex-col items-center justify-center gap-4">
           <div className="w-8 h-8 rounded-full border-2 border-[#C8A96A] border-t-transparent animate-spin"></div>

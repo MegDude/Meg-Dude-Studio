@@ -14,7 +14,7 @@ const BeforeAfterModal: React.FC<Props> = ({ isOpen, onClose, beforeImage, after
  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
  <div className="dp-panel w-full max-w-5xl overflow-hidden flex flex-col">
  <div className="flex justify-between items-center p-4 border-b border-[rgba(255,255,255,0.35)]">
- <h3 className="font-bold text-lg text-navy-900 dp-editorial-headline">Before & After Comparison</h3>
+ <h3 className="ic-editorial-step-title">Before & After Comparison</h3>
  <div className="flex gap-2">
  <a 
  href={afterImage} 

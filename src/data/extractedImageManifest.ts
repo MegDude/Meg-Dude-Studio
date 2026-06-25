@@ -19,8 +19,14 @@ export function getOptimizedImageUrl(productId: string, originalUrl?: string): s
     return manifestEntry.localPath;
   }
   
-  // If remote URL is valid, use it
-  if (originalUrl && originalUrl.startsWith('http')) {
+  // If the URL is valid for the browser, use it. Restored workspace objects
+  // commonly use data URLs, while in-session uploads use blob URLs.
+  if (
+    originalUrl &&
+    (originalUrl.startsWith('http') ||
+      originalUrl.startsWith('blob:') ||
+      originalUrl.startsWith('data:image/'))
+  ) {
     return originalUrl;
   }
   

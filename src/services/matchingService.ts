@@ -6,7 +6,7 @@ export const suggestMatchingItems = async (
   currentDesignStyle: string = "quiet-luxury"
 ): Promise<ProductLibraryItem[]> => {
   // Step 1: Analyze current objects to generate a style profile
-  // In a real AI system, we'd pass images to Gemini, but here we can heuristically 
+  // In a real AI system, we'd pass images to a vision model, but here we can heuristically
   // determine based on the metadata of placed objects if available, 
   // or default to the provided parameters.
   

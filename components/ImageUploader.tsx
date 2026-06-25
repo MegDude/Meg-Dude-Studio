@@ -26,6 +26,8 @@ interface ImageUploaderProps {
  isDropZone?: boolean;
  onProductDrop?: (position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
  onObjectMove?: (id: string, position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
+ onLibraryProductDrop?: (product: { url: string; name: string }, position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
+ onScenePointSelect?: (position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
  persistedOrbPosition?: { x: number; y: number } | null;
  showDebugButton?: boolean;
  onDebugClick?: () => void;
@@ -48,7 +50,7 @@ const WarningIcon: React.FC = () => (
 );
 
 
-const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, label, onFileSelect, imageUrl, className = "", isDropZone = false, onProductDrop, persistedOrbPosition, showDebugButton, onDebugClick, isTouchHovering = false, touchOrbPosition = null, placedObjects = [], onObjectMove, showPerspectiveGrid = false }, ref) => {
+const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, label, onFileSelect, imageUrl, className = "", isDropZone = false, onProductDrop, onLibraryProductDrop, onScenePointSelect, persistedOrbPosition, showDebugButton, onDebugClick, isTouchHovering = false, touchOrbPosition = null, placedObjects = [], onObjectMove, showPerspectiveGrid = false }, ref) => {
  const inputRef = useRef<HTMLInputElement>(null);
  const imgRef = useRef<HTMLImageElement>(null);
  const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -79,9 +81,9 @@ const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, la
  };
  
  // A shared handler for both click and drop placements.
- const handlePlacement = useCallback((clientX: number, clientY: number, currentTarget: HTMLDivElement) => {
+ const getPlacementFromPoint = useCallback((clientX: number, clientY: number, currentTarget: HTMLDivElement) => {
  const img = imgRef.current;
- if (!img || !onProductDrop) return;
+ if (!img) return null;
 
  const containerRect = currentTarget.getBoundingClientRect();
  const { naturalWidth, naturalHeight } = img;
@@ -112,14 +114,22 @@ const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, la
  // Check if the action was outside the image area (in the padding)
  if (imageX < 0 || imageX > renderedWidth || imageY < 0 || imageY > renderedHeight) {
  console.warn("Action was outside the image boundaries.");
- return;
+ return null;
  }
 
  const xPercent = (imageX / renderedWidth) * 100;
  const yPercent = (imageY / renderedHeight) * 100;
 
- onProductDrop({ x: pointX, y: pointY }, { xPercent, yPercent });
- }, [onProductDrop]);
+ return { position: { x: pointX, y: pointY }, relativePosition: { xPercent, yPercent } };
+ }, []);
+
+ // A shared handler for both click and drop placements.
+ const handlePlacement = useCallback((clientX: number, clientY: number, currentTarget: HTMLDivElement) => {
+ if (!onProductDrop) return;
+ const placement = getPlacementFromPoint(clientX, clientY, currentTarget);
+ if (!placement) return;
+ onProductDrop(placement.position, placement.relativePosition);
+ }, [onProductDrop, getPlacementFromPoint]);
 
  
  const handleMovePlacement = useCallback((clientX: number, clientY: number, currentTarget: HTMLDivElement, id: string) => {
@@ -195,9 +205,14 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  }, [touchDragObj, handleMovePlacement]);
 
  const handleClick = (event: React.MouseEvent<HTMLDivElement>) => {
- if (isDropZone && onProductDrop) {
- // If it's a drop zone, a click should place the product.
- handlePlacement(event.clientX, event.clientY, event.currentTarget);
+ if (isDropZone && (onProductDrop || onScenePointSelect)) {
+ const placement = getPlacementFromPoint(event.clientX, event.clientY, event.currentTarget);
+ if (!placement) return;
+ if (onScenePointSelect) {
+ onScenePointSelect(placement.position, placement.relativePosition);
+ return;
+ }
+ onProductDrop?.(placement.position, placement.relativePosition);
  } else {
  // Otherwise, it's an uploader, so open the file dialog.
  inputRef.current?.click();
@@ -236,6 +251,19 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  }
  return;
  }
+ if (dragData.startsWith('library-product:') && onLibraryProductDrop) {
+ const payload = dragData.replace('library-product:', '');
+ const [encodedUrl, encodedName] = payload.split('|');
+ const placement = getPlacementFromPoint(event.clientX, event.clientY, event.currentTarget);
+ if (placement && encodedUrl && encodedName) {
+ onLibraryProductDrop(
+ { url: decodeURIComponent(encodedUrl), name: decodeURIComponent(encodedName) },
+ placement.position,
+ placement.relativePosition
+ );
+ }
+ return;
+ }
  // Case 1: A product is being dropped onto the scene
  handlePlacement(event.clientX, event.clientY, event.currentTarget);
  } else {
@@ -251,17 +279,27 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  onFileSelect(file);
  }
  }
- }, [isDropZone, onProductDrop, onFileSelect, handlePlacement, handleMovePlacement, onObjectMove]);
+ }, [isDropZone, onProductDrop, onLibraryProductDrop, onFileSelect, handlePlacement, handleMovePlacement, getPlacementFromPoint, onObjectMove]);
  
  const showHoverState = isDraggingOver || isTouchHovering;
  const currentOrbPosition = orbPosition || touchOrbPosition;
  const isActionable = isDropZone || !imageUrl;
+ const fallbackAlt = id.includes('product')
+ ? 'Uploaded product'
+ : id.includes('moodboard')
+ ? 'Mood Studio room scene'
+ : 'Room scene preview';
+ const interactionClasses = showHoverState
+ ? 'border-white/80 border-solid is-dragging-over'
+ : isDropZone
+ ? 'border-white/60 cursor-crosshair border-dashed'
+ : !imageUrl
+ ? 'border-white/50 border-dashed hover:border-white/80 cursor-pointer'
+ : 'border-white/50 border-dashed cursor-default';
 
  const uploaderClasses = `dp-panel ic-uploader-shell w-full aspect-square md:aspect-video relative overflow-hidden flex flex-col items-center justify-center transition-all duration-300 ${className} ${
- showHoverState ? 'border-white/80 border-solid is-dragging-over'
- : isDropZone ? 'border-white/60 cursor-crosshair border-dashed'
- : 'border-white/50 border-dashed hover:border-white/80 cursor-pointer'
- } ${!isActionable ? 'cursor-default' : ''}`;
+ interactionClasses
+ }`;
 
  return (
  <div className="flex flex-col items-center w-full">
@@ -273,6 +311,7 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  onDragLeave={handleDragLeave}
  onDrop={handleDrop}
  data-dropzone-id={id}
+ data-scene-dropzone={isDropZone ? 'true' : undefined}
  >
  <input
  type="file"
@@ -287,19 +326,21 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  <img 
  ref={imgRef}
  src={imageUrl} 
- alt={label || 'Uploaded Scene'} 
+ alt={label || fallbackAlt} 
  className="w-full h-full object-contain" 
  />
- {isDropZone && (isDraggingOver || isTouchHovering) && (
+ {isDropZone && (showPerspectiveGrid || isDraggingOver || isTouchHovering) && (
  <PerspectiveGuideOverlay isVisible={true} />
  )}
+ {currentOrbPosition && (
  <div 
  className="drop-orb" 
  style={{ 
- left: currentOrbPosition ? currentOrbPosition.x : -9999, 
- top: currentOrbPosition ? currentOrbPosition.y : -9999 
+ left: currentOrbPosition.x, 
+ top: currentOrbPosition.y 
  }}
  ></div>
+ )}
  {persistedOrbPosition && (
  <div 
  className="drop-orb" 
@@ -314,13 +355,16 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  )}
  {placedObjects.map((obj, index) => {
  if (obj.isVisible === false) return null;
+ const containerRect = imgRef.current?.parentElement?.getBoundingClientRect();
+ const derivedX = containerRect && obj.pixelPosition.x === 0 && obj.pixelPosition.y === 0 ? (obj.relativePosition.xPercent / 100) * containerRect.width : obj.pixelPosition.x;
+ const derivedY = containerRect && obj.pixelPosition.x === 0 && obj.pixelPosition.y === 0 ? (obj.relativePosition.yPercent / 100) * containerRect.height : obj.pixelPosition.y;
  return (
  <div 
  key={obj.id} 
  className="absolute w-12 h-12 dp-radius border-[3px] border-white overflow-hidden pointer-events-auto cursor-move animate-fade-in" draggable="true" onDragStart={(e) => { e.dataTransfer.setData('text/plain', `reposition:${obj.id}`); e.stopPropagation(); }}
  style={{ 
- left: touchDragObj?.id === obj.id ? touchDragObj.x - (imgRef.current?.parentElement?.getBoundingClientRect().left || 0) : obj.pixelPosition.x, 
- top: touchDragObj?.id === obj.id ? touchDragObj.y - (imgRef.current?.parentElement?.getBoundingClientRect().top || 0) : obj.pixelPosition.y,
+ left: touchDragObj?.id === obj.id ? touchDragObj.x - (imgRef.current?.parentElement?.getBoundingClientRect().left || 0) : derivedX, 
+ top: touchDragObj?.id === obj.id ? touchDragObj.y - (imgRef.current?.parentElement?.getBoundingClientRect().top || 0) : derivedY,
  transform: `translate(-50%, -50%) scale(${obj.scale ?? 1}) rotate(${obj.rotation ?? 0}deg)`,
  zIndex: (touchDragObj?.id === obj.id ? 1000 : 10) + index,
  opacity: touchDragObj?.id === obj.id ? 0.8 : 1
@@ -346,7 +390,7 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  ) : (
  <div className="ic-uploader-empty text-center dp-muted">
  <UploadIcon />
- <p>Click to upload or drag & drop</p>
+ <p>Upload or drop image</p>
  </div>
  )}
  </div>

@@ -61,7 +61,7 @@ const DebugModal: React.FC<DebugModalProps> = ({ isOpen, onClose, imageUrl, prom
  
  {prompt && (
  <div>
- <h3 className="text-lg font-bold text-navy-900 mb-2 dp-editorial-headline">Final Prompt to Image Model</h3>
+ <h3 className="ic-editorial-step-title mb-2">Final Prompt to Image Model</h3>
  <pre className="bg-navy-50/50 text-navy-900 p-4 dp-radius text-xs whitespace-pre-wrap">
  <code>{prompt}</code>
  </pre>
