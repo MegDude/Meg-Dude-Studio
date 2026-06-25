@@ -3,13 +3,18 @@ import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 const source = fs.readFileSync('src/data/productLibrary.ts', 'utf8');
-const productCount = (source.match(/\n\s*(product|retailer|austin)\('/g) || []).length;
-const imagePaths = [...source.matchAll(/'([^']+\.(?:png|jpe?g|webp))'/g)]
+const productIds = [...source.matchAll(/\n\s*product\('([^']+)'/g)].map((match) => match[1]);
+const productCount = productIds.length;
+const explicitImagePaths = [...source.matchAll(/'([^']+\.(?:png|jpe?g|webp))'/g)]
   .map((match) => match[1])
   .filter((path) => path.startsWith('/'));
+const imagePaths = [
+  ...explicitImagePaths,
+  ...productIds.map((id) => `/images/product-library/${id}.png`),
+];
 const uniqueImagePaths = [...new Set(imagePaths)];
 const missing = uniqueImagePaths.filter((path) => !fs.existsSync(`public${path}`));
-const nonCutoutPaths = uniqueImagePaths.filter((path) => !path.startsWith('/product-cutouts/'));
+const nonProductLibraryPaths = uniqueImagePaths.filter((path) => !path.startsWith('/images/product-library/'));
 const alphaReport = execFileSync(
   '/Users/megdude/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3',
   ['-c', `
@@ -26,21 +31,21 @@ print('\\n'.join(opaque))
 `, ...uniqueImagePaths],
   { encoding: 'utf8' }
 ).trim();
-const requiredAttachedIds = [
-  'westelm-loring-sofa',
-  'potterybarn-hayden-table-lamp',
-  'lo-luna-nightstand',
-  'th-brass-trays',
-  'supply-pelargonium-lapis',
-  'fourhands-core-sofas',
-  'roomservice-midcentury',
+const requiredProductIds = [
+  'cream-track-sofa',
+  'green-tufted-sofa',
+  'muse-sofa',
+  'womb-chair',
+  'dining-round-table-set',
+  'linear-pendant-light',
+  'bedside-table-lamp',
 ];
-const missingAttachedIds = requiredAttachedIds.filter((id) => !source.includes(`'${id}'`));
+const missingProductIds = requiredProductIds.filter((id) => !source.includes(`'${id}'`));
 
-assert.ok(productCount >= 50, `Expected at least 50 product records, found ${productCount}.`);
+assert.equal(productCount, 18, `Expected the rebuilt 18-product library, found ${productCount}.`);
 assert.equal(missing.length, 0, `Missing product images:\n${missing.join('\n')}`);
-assert.equal(nonCutoutPaths.length, 0, `Product library must use clean transparent cutouts only:\n${nonCutoutPaths.join('\n')}`);
-assert.equal(missingAttachedIds.length, 0, `Missing attached catalog products:\n${missingAttachedIds.join('\n')}`);
+assert.equal(nonProductLibraryPaths.length, 0, `Product library must use rebuilt local product images only:\n${nonProductLibraryPaths.join('\n')}`);
+assert.equal(missingProductIds.length, 0, `Missing rebuilt catalog products:\n${missingProductIds.join('\n')}`);
 assert.equal(alphaReport, '', `Product images must have transparent alpha:\n${alphaReport}`);
 
 console.log(`product library image tests passed: ${productCount} products, ${uniqueImagePaths.length} local image paths`);

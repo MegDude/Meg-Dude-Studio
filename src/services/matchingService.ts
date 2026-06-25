@@ -21,7 +21,7 @@ export const suggestMatchingItems = async (
 
   // Step 2 & 3: Filter and score library items
   const scoredItems = PRODUCT_LIBRARY.map(item => {
-    let score = item.premiumScore + (item.legendsFitScore * 1.5); // Weight Legends Fit heavily
+    let score = item.premiumScore + (item.legendsFitScore * 1.5); // Weight style fit heavily
     
     // Style Match
     if (item.styleTags.includes(profile.style)) score += 20;

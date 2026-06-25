@@ -14,7 +14,7 @@ import { FALLBACK_DESIGN_IMAGES, canGenerateDesign } from './src/lib/defaultImag
 
 type Workflow = 'design' | 'stage' | 'mood';
 type EditMode = 'add' | 'remove';
-type ProductSourceFilter = 'All' | 'Attached' | 'Legends' | 'West Elm' | 'Pottery Barn' | 'Austin';
+type ProductSourceFilter = 'All' | 'Catalog' | 'Sourced';
 
 type SceneLibraryItem = {
   id: string;
@@ -51,26 +51,21 @@ type HistorySnapshot = {
   placedObjects: PlacedObject[];
 };
 
-const productSourceFilters: ProductSourceFilter[] = ['All', 'Attached', 'West Elm', 'Pottery Barn', 'Austin', 'Legends'];
+const productSourceFilters: ProductSourceFilter[] = ['All', 'Catalog', 'Sourced'];
 
 const getProductSourceLabel = (product: ProductLibraryItem) => {
-  if (product.sourceType === 'Retailer') return product.brand;
-  if (product.sourceType === 'Austin') return 'Austin catalog';
-  return 'Legends';
+  if (product.sourceType === 'Sourced') return 'Sourced product';
+  return 'Product catalog';
 };
 
 const matchesProductSource = (product: ProductLibraryItem, source: ProductSourceFilter) => {
   if (source === 'All') return true;
-  if (source === 'Attached') return product.sourceType === 'Retailer' || product.sourceType === 'Austin';
-  if (source === 'Legends') return product.sourceType === 'Legends';
-  if (source === 'Austin') return product.sourceType === 'Austin';
-  return product.sourceType === 'Retailer' && product.brand === source;
+  return (product.sourceType || 'Catalog') === source;
 };
 
 const productSourceRank = (product: ProductLibraryItem) => {
-  if (product.sourceType === 'Retailer') return 0;
-  if (product.sourceType === 'Austin') return 1;
-  return 2;
+  if (product.sourceType === 'Sourced') return 0;
+  return 1;
 };
 
 type SavedProject = {
