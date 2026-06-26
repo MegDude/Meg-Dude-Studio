@@ -8,7 +8,285 @@
   --ic-border: rgba(11, 31, 51, 0.08);
   --ic-border-strong: rgba(11, 31, 51, 0.16);
   --ic-shadow: 0 14px 34px rgba(11, 31, 51, 0.055);
+  --ic-glow: 0 0 18px rgba(200, 169, 106, 0.2);
   --ic-font: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* Premium polish lock */
+.ic-app-v2 {
+  --ic-gold-glow: 0 8px 24px rgba(200, 169, 106, 0.16);
+  --ic-button-glow: 0 7px 18px rgba(11, 31, 51, 0.07), 0 0 0 1px rgba(200, 169, 106, 0.1);
+}
+
+.ic-global-header a,
+.ic-global-header button,
+.ic-menu button,
+.ic-workflow-switcher button,
+.ic-chip-row button,
+.ic-inline-actions button,
+.ic-action-strip button,
+.ic-action-strip a,
+.ic-mode-toggle button,
+.ic-output-preview a,
+.ic-error-line button,
+.ic-editor-tools button,
+.ic-agent-status button,
+.ic-measure-header button,
+.ic-measure-actions button,
+.ic-compare-action,
+.ic-compare-close {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ic-global-header > button,
+.ic-compare-close,
+.ic-modal-header button {
+  width: 32px;
+  min-height: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.ic-action-strip button,
+.ic-action-strip a,
+.ic-inline-actions button,
+.ic-editor-tools button,
+.ic-mode-toggle button,
+.ic-chip-row button,
+.ic-agent-status button,
+.ic-output-preview a {
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: none;
+}
+
+.ic-action-strip button:first-child:not(:disabled),
+.ic-action-strip a,
+.ic-workflow-switcher button.is-active,
+.ic-mode-toggle button.is-active,
+.ic-chip-row button.is-active,
+.ic-editor-tools button.is-active {
+  border-color: rgba(200, 169, 106, 0.28);
+  background: rgba(200, 169, 106, 0.1);
+  color: #9b7a39;
+  box-shadow: var(--ic-gold-glow);
+}
+
+.ic-action-strip button:hover,
+.ic-action-strip a:hover,
+.ic-inline-actions button:hover,
+.ic-editor-tools button:hover,
+.ic-mode-toggle button:hover,
+.ic-chip-row button:hover,
+.ic-agent-status button:hover,
+.ic-output-preview a:hover,
+.ic-action-strip button:focus-visible,
+.ic-action-strip a:focus-visible,
+.ic-inline-actions button:focus-visible,
+.ic-editor-tools button:focus-visible,
+.ic-mode-toggle button:focus-visible,
+.ic-chip-row button:focus-visible,
+.ic-agent-status button:focus-visible,
+.ic-output-preview a:focus-visible {
+  border-color: rgba(200, 169, 106, 0.24);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: var(--ic-button-glow);
+  color: #9b7a39;
+}
+
+.ic-hero-compact {
+  gap: 6px;
+  margin-bottom: clamp(12px, 1.6vw, 22px);
+}
+
+.ic-hero-compact h1 {
+  font-size: clamp(24px, 3.6vw, 52px);
+  font-weight: 590;
+}
+
+.ic-hero-compact p {
+  font-size: clamp(12px, 0.96vw, 15px);
+}
+
+.ic-hero-compact p:first-child,
+.ic-brand-lockup,
+.ic-progress-strip p,
+.ic-count,
+.ic-asset-tile small {
+  letter-spacing: 0.02em !important;
+}
+
+.ic-workflow-switcher {
+  width: min(100%, 590px);
+  gap: 4px;
+  padding: 3px;
+  box-shadow: 0 10px 28px rgba(11, 31, 51, 0.035);
+}
+
+.ic-workflow-switcher button {
+  min-height: 30px;
+  padding-inline: clamp(9px, 1.1vw, 14px);
+  font-size: clamp(11px, 0.82vw, 12px);
+}
+
+.ic-progress-strip {
+  width: min(100%, 650px);
+  margin-bottom: clamp(10px, 1.2vw, 16px);
+}
+
+.ic-progress-strip span {
+  width: clamp(18px, 1.35vw, 22px);
+  height: clamp(18px, 1.35vw, 22px);
+  font-size: 10px;
+}
+
+.ic-progress-strip p {
+  font-size: clamp(9.5px, 0.72vw, 11px);
+  font-weight: 650;
+}
+
+.ic-canvas-card,
+.ic-controls-panel,
+.ic-library-section {
+  border-color: rgba(11, 31, 51, 0.075);
+  box-shadow: 0 16px 42px rgba(11, 31, 51, 0.035);
+}
+
+.ic-canvas-toolbar h2,
+.ic-section-heading h3,
+.ic-modal-header h2 {
+  font-size: clamp(16px, 1.22vw, 21px);
+  font-weight: 590;
+}
+
+.ic-canvas-toolbar p,
+.ic-section-heading p,
+.ic-small-note,
+.ic-recovery-panel p,
+.ic-agent-status,
+.ic-loading-line,
+.ic-error-line {
+  font-size: 11.5px;
+  font-weight: 560;
+  line-height: 1.35;
+}
+
+.ic-controls-panel textarea,
+.ic-controls-panel input[type="text"],
+.ic-controls-panel input:not([type]) {
+  font-size: 12.5px;
+  line-height: 1.36;
+}
+
+.ic-controls-panel textarea {
+  min-height: 72px;
+  padding: 9px;
+}
+
+.ic-controls-panel input {
+  min-height: 32px;
+  padding: 7px 9px;
+}
+
+.ic-library-section {
+  gap: clamp(8px, 0.9vw, 13px);
+}
+
+.ic-chip-row,
+.ic-inline-actions,
+.ic-action-strip,
+.ic-mode-toggle,
+.ic-editor-tools {
+  gap: 6px;
+}
+
+.ic-asset-grid {
+  gap: clamp(8px, 0.85vw, 12px);
+}
+
+.ic-asset-tile {
+  flex-basis: clamp(86px, 7.2vw, 116px);
+  gap: 5px;
+}
+
+.ic-product-library-section .ic-asset-tile {
+  flex-basis: clamp(94px, 8vw, 126px);
+}
+
+.ic-asset-tile img,
+.ic-asset-tile > div,
+.ic-upload-box {
+  border-color: rgba(11, 31, 51, 0.07);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfaf7 100%);
+}
+
+.ic-product-library-section .ic-asset-tile img {
+  padding: 8px;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 16px rgba(11, 31, 51, 0.1));
+}
+
+.ic-asset-tile:hover img,
+.ic-asset-tile:hover > div,
+.ic-asset-tile:hover .ic-upload-box,
+.ic-asset-tile.is-active img,
+.ic-asset-tile.is-active > div {
+  border-color: rgba(200, 169, 106, 0.5);
+  box-shadow: var(--ic-gold-glow);
+}
+
+.ic-asset-tile span {
+  color: rgba(11, 31, 51, 0.72);
+  font-size: clamp(10px, 0.76vw, 11.5px);
+  font-weight: 650;
+}
+
+.ic-asset-tile small {
+  color: rgba(11, 31, 51, 0.44);
+  font-size: clamp(9px, 0.66vw, 10px);
+  font-weight: 620;
+}
+
+.ic-upload-box {
+  font-size: 10.5px;
+  font-weight: 720;
+}
+
+@media (max-width: 430px) {
+  .ic-global-header > button {
+    width: 32px;
+    min-height: 32px;
+  }
+
+  .ic-workflow-switcher button {
+    min-height: 28px;
+    padding-inline: 7px;
+    font-size: 10.5px;
+  }
+
+  .ic-canvas-toolbar h2,
+  .ic-section-heading h3 {
+    font-size: 16px;
+  }
+
+  .ic-action-strip button,
+  .ic-action-strip a,
+  .ic-inline-actions button,
+  .ic-editor-tools button,
+  .ic-mode-toggle button,
+  .ic-chip-row button {
+    min-height: 27px;
+    padding: 4px 7px;
+    font-size: 10.5px;
+  }
+
+  .ic-product-library-section .ic-asset-tile {
+    flex-basis: calc(58% - 16px);
+  }
 }
 
 * {
@@ -96,18 +374,18 @@ img {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 32px;
+  gap: 5px;
+  min-height: 28px;
   padding: 4px 0;
   border: 0;
   border-radius: 0;
   background: transparent;
   color: var(--ic-navy);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 650;
   line-height: 1.1;
   text-decoration: none;
-  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease, opacity 160ms ease;
+  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease, opacity 160ms ease, box-shadow 160ms ease, text-shadow 160ms ease;
 }
 
 .ic-brand-lockup {
@@ -138,8 +416,8 @@ img {
 }
 
 .ic-global-header > button {
-  width: 40px;
-  min-height: 40px;
+  width: 34px;
+  min-height: 34px;
   padding: 0;
 }
 
@@ -156,6 +434,7 @@ img {
 .ic-output-preview a:hover,
 .ic-error-line button:hover {
   color: var(--ic-gold);
+  text-shadow: var(--ic-glow);
   outline: none;
 }
 
@@ -225,8 +504,8 @@ img {
   justify-content: center;
   gap: 8px;
   width: min(100%, 680px);
-  margin: 0 auto clamp(10px, 1.3vw, 18px);
-  padding: 4px;
+  margin: 0 auto clamp(8px, 1vw, 14px);
+  padding: 3px;
   border: 1px solid var(--ic-border);
   background: #fff;
   overflow-x: auto;
@@ -240,16 +519,17 @@ img {
 .ic-workflow-switcher button {
   flex: 1 0 auto;
   min-width: max-content;
-  min-height: 34px;
-  padding-inline: clamp(11px, 1.5vw, 18px);
+  min-height: 30px;
+  padding-inline: clamp(9px, 1.2vw, 15px);
   color: rgba(11, 31, 51, 0.52);
-  font-size: clamp(12px, 0.92vw, 14px);
+  font-size: clamp(11px, 0.82vw, 13px);
   white-space: nowrap;
 }
 
 .ic-workflow-switcher button.is-active {
   background: var(--ic-navy);
   color: #fff;
+  box-shadow: 0 0 0 1px rgba(200, 169, 106, 0.18), var(--ic-glow);
 }
 
 .ic-chip-row button.is-active,
@@ -364,8 +644,9 @@ img {
 .ic-small-note {
   margin: 0;
   color: var(--ic-navy-soft);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
+  letter-spacing: 0;
 }
 
 .ic-canvas-toolbar h2,
@@ -373,10 +654,11 @@ img {
 .ic-modal-header h2 {
   margin: 0;
   color: var(--ic-navy);
-  font-size: clamp(18px, 1.45vw, 24px);
+  font-size: clamp(16px, 1.2vw, 21px);
   font-weight: 600;
   letter-spacing: 0;
   line-height: 1.12;
+  text-wrap: balance;
 }
 
 .ic-section-heading p,
@@ -398,7 +680,7 @@ img {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .ic-inline-actions {
@@ -495,7 +777,7 @@ img {
   padding: 10px 0 0;
   color: var(--ic-navy-soft);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 650;
 }
 
 .ic-error-line {
@@ -523,12 +805,13 @@ img {
   background: transparent;
   color: var(--ic-navy);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .ic-agent-status button:hover,
 .ic-agent-status button:focus-visible {
   color: var(--ic-gold);
+  text-shadow: var(--ic-glow);
   outline: none;
 }
 
@@ -570,19 +853,20 @@ img {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-height: 30px;
+  gap: 5px;
+  min-height: 26px;
   border: 0;
   background: transparent;
   color: rgba(11, 31, 51, 0.72);
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 650;
 }
 
 .ic-editor-tools button:hover,
 .ic-editor-tools button:focus-visible,
 .ic-editor-tools button.is-active {
   color: var(--ic-gold);
+  text-shadow: var(--ic-glow);
   outline: none;
 }
 
@@ -594,21 +878,21 @@ img {
   border-radius: 0;
   background: #fff;
   color: var(--ic-navy);
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.42;
   outline: none;
   transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .ic-controls-panel textarea {
-  min-height: 86px;
+  min-height: 76px;
   resize: vertical;
-  padding: 10px;
+  padding: 9px;
 }
 
 .ic-controls-panel input {
-  min-height: 36px;
-  padding: 8px 10px;
+  min-height: 32px;
+  padding: 7px 9px;
 }
 
 .ic-controls-panel textarea:focus,
@@ -637,13 +921,14 @@ img {
 }
 
 .ic-action-strip {
-  padding-top: 9px;
+  padding-top: 6px;
   border-top: 1px solid var(--ic-border);
 }
 
 .ic-action-strip button:first-child:not(:disabled),
 .ic-action-strip a {
   color: var(--ic-gold);
+  text-shadow: var(--ic-glow);
 }
 
 .ic-library-section {
@@ -671,9 +956,9 @@ img {
 }
 
 .ic-chip-row button {
-  min-height: 24px;
+  min-height: 22px;
   color: rgba(11, 31, 51, 0.52);
-  font-size: 11px;
+  font-size: 10.5px;
   line-height: 1;
 }
 
@@ -1510,5 +1795,206 @@ img {
   .ic-before-after-label {
     top: 8px;
     font-size: 9px;
+  }
+}
+
+/* Final premium lock */
+.ic-global-header a,
+.ic-global-header button,
+.ic-menu button,
+.ic-workflow-switcher button,
+.ic-chip-row button,
+.ic-inline-actions button,
+.ic-action-strip button,
+.ic-action-strip a,
+.ic-mode-toggle button,
+.ic-output-preview a,
+.ic-error-line button,
+.ic-editor-tools button,
+.ic-agent-status button {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ic-global-header > button {
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+}
+
+.ic-action-strip button,
+.ic-action-strip a,
+.ic-inline-actions button,
+.ic-editor-tools button,
+.ic-mode-toggle button,
+.ic-chip-row button,
+.ic-agent-status button,
+.ic-output-preview a {
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: none;
+}
+
+.ic-action-strip button:first-child:not(:disabled),
+.ic-action-strip a,
+.ic-workflow-switcher button.is-active,
+.ic-mode-toggle button.is-active,
+.ic-chip-row button.is-active,
+.ic-editor-tools button.is-active {
+  border-color: rgba(200, 169, 106, 0.28);
+  background: rgba(200, 169, 106, 0.1);
+  color: #9b7a39;
+  box-shadow: 0 8px 24px rgba(200, 169, 106, 0.16);
+}
+
+.ic-action-strip button:hover,
+.ic-action-strip a:hover,
+.ic-inline-actions button:hover,
+.ic-editor-tools button:hover,
+.ic-mode-toggle button:hover,
+.ic-chip-row button:hover,
+.ic-agent-status button:hover,
+.ic-output-preview a:hover,
+.ic-action-strip button:focus-visible,
+.ic-action-strip a:focus-visible,
+.ic-inline-actions button:focus-visible,
+.ic-editor-tools button:focus-visible,
+.ic-mode-toggle button:focus-visible,
+.ic-chip-row button:focus-visible,
+.ic-agent-status button:focus-visible,
+.ic-output-preview a:focus-visible {
+  border-color: rgba(200, 169, 106, 0.24);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 7px 18px rgba(11, 31, 51, 0.07), 0 0 0 1px rgba(200, 169, 106, 0.1);
+  color: #9b7a39;
+}
+
+.ic-hero-compact {
+  gap: 6px;
+  margin-bottom: clamp(12px, 1.6vw, 22px);
+}
+
+.ic-hero-compact h1 {
+  font-size: clamp(24px, 3.6vw, 52px);
+  font-weight: 590;
+}
+
+.ic-hero-compact p {
+  font-size: clamp(12px, 0.96vw, 15px);
+}
+
+.ic-workflow-switcher {
+  width: min(100%, 590px);
+  gap: 4px;
+  padding: 3px;
+  box-shadow: 0 10px 28px rgba(11, 31, 51, 0.035);
+}
+
+.ic-workflow-switcher button {
+  min-height: 30px;
+  padding-inline: clamp(9px, 1.1vw, 14px);
+  font-size: clamp(11px, 0.82vw, 12px);
+}
+
+.ic-canvas-card,
+.ic-controls-panel,
+.ic-library-section {
+  border-color: rgba(11, 31, 51, 0.075);
+  box-shadow: 0 16px 42px rgba(11, 31, 51, 0.035);
+}
+
+.ic-canvas-toolbar h2,
+.ic-section-heading h3,
+.ic-modal-header h2 {
+  font-size: clamp(16px, 1.22vw, 21px);
+  font-weight: 590;
+}
+
+.ic-canvas-toolbar p,
+.ic-section-heading p,
+.ic-small-note,
+.ic-recovery-panel p,
+.ic-agent-status,
+.ic-loading-line,
+.ic-error-line {
+  font-size: 11.5px;
+  font-weight: 560;
+  line-height: 1.35;
+}
+
+.ic-controls-panel textarea {
+  min-height: 72px;
+  padding: 9px;
+  font-size: 12.5px;
+}
+
+.ic-controls-panel input {
+  min-height: 32px;
+  padding: 7px 9px;
+  font-size: 12.5px;
+}
+
+.ic-chip-row,
+.ic-inline-actions,
+.ic-action-strip,
+.ic-mode-toggle,
+.ic-editor-tools {
+  gap: 6px;
+}
+
+.ic-asset-grid {
+  gap: clamp(8px, 0.85vw, 12px);
+}
+
+.ic-asset-tile {
+  flex-basis: clamp(86px, 7.2vw, 116px);
+  gap: 5px;
+}
+
+.ic-product-library-section .ic-asset-tile {
+  flex-basis: clamp(94px, 8vw, 126px);
+}
+
+.ic-asset-tile img,
+.ic-asset-tile > div,
+.ic-upload-box {
+  border-color: rgba(11, 31, 51, 0.07);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfaf7 100%);
+}
+
+.ic-product-library-section .ic-asset-tile img {
+  padding: 8px;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 16px rgba(11, 31, 51, 0.1));
+}
+
+.ic-asset-tile:hover img,
+.ic-asset-tile:hover > div,
+.ic-asset-tile:hover .ic-upload-box,
+.ic-asset-tile.is-active img,
+.ic-asset-tile.is-active > div {
+  border-color: rgba(200, 169, 106, 0.5);
+  box-shadow: 0 8px 24px rgba(200, 169, 106, 0.16);
+}
+
+.ic-asset-tile span {
+  color: rgba(11, 31, 51, 0.72);
+  font-size: clamp(10px, 0.76vw, 11.5px);
+  font-weight: 650;
+}
+
+.ic-asset-tile small {
+  color: rgba(11, 31, 51, 0.44);
+  font-size: clamp(9px, 0.66vw, 10px);
+  font-weight: 620;
+  letter-spacing: 0.02em !important;
+}
+
+@media (max-width: 430px) {
+  .ic-product-library-section .ic-asset-tile {
+    flex-basis: calc(58% - 16px);
   }
 }

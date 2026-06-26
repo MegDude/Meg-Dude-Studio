@@ -194,11 +194,11 @@ const App: React.FC = () => {
   const [selectedProductFile, setSelectedProductFile] = useState<File | null>(null);
   const [removePrompt, setRemovePrompt] = useState('');
   const [removeTargetPosition, setRemoveTargetPosition] = useState<{ x: number; y: number } | null>(null);
-  const [stagePrompt, setStagePrompt] = useState('Modern warm-minimal staging with clean lines, calm neutral textiles, refined lighting, and a polished listing-ready finish.');
-  const [designBrief, setDesignBrief] = useState('Create a polished interior composition using the selected room and products.');
+  const [stagePrompt, setStagePrompt] = useState('Warm minimal staging with refined light, tailored textiles, and a listing-ready finish.');
+  const [designBrief, setDesignBrief] = useState('Create a refined room composition with the selected pieces.');
   const [keepPrompt, setKeepPrompt] = useState('');
   const [stageRemovePrompt, setStageRemovePrompt] = useState('');
-  const [moodPrompt, setMoodPrompt] = useState('Warm minimal apartment moodboard with layered neutrals, wood, linen, stone, and cold gold accents.');
+  const [moodPrompt, setMoodPrompt] = useState('Warm minimal moodboard with linen, stone, wood, and quiet brass accents.');
   const [moodProducts, setMoodProducts] = useState<{ name: string; url: string }[]>([]);
   const [moodboardImageUrl, setMoodboardImageUrl] = useState<string | null>(null);
   const [ambientLight, setAmbientLight] = useState(100);
@@ -313,7 +313,7 @@ const App: React.FC = () => {
     if (!sceneImage) {
       setSelectedProduct(product);
       setSelectedProductFile(file);
-      setStatus('Product selected. Add a room scene next.');
+      setStatus('Product selected. Choose a room next.');
       return;
     }
 
@@ -334,7 +334,7 @@ const App: React.FC = () => {
         isVisible: true,
       },
     ]);
-    setStatus('Product placed. Drag it on the room to adjust.');
+    setStatus('Product placed. Drag to refine.');
   }, [pushHistory, sceneImage]);
 
   const selectProductFromLibrary = useCallback(async (product: ProductLibraryItem, relativePosition?: { xPercent: number; yPercent: number }, pixelPosition?: { x: number; y: number }) => {
@@ -373,7 +373,7 @@ const App: React.FC = () => {
 
   const handleCanvasDrop = useCallback((pixelPosition: { x: number; y: number }, relativePosition: { xPercent: number; yPercent: number }) => {
     if (!selectedProductFile || !selectedProduct) {
-      setStatus('Select a product first, then tap the room.');
+      setStatus('Select a product, then tap the room.');
       return;
     }
     placeProduct(selectedProductFile, selectedProduct, relativePosition, pixelPosition);
@@ -456,7 +456,7 @@ const App: React.FC = () => {
         image: dataUrlToFile(item.imageBase64, `${item.id}.jpg`),
       })));
       setMoodProducts(project.moodProducts || []);
-      setDesignBrief(project.designBrief || 'Create a polished interior composition using the selected room and products.');
+      setDesignBrief(project.designBrief || 'Create a refined room composition with the selected pieces.');
       setMoodPrompt(project.moodPrompt || '');
       setStagePrompt(project.stagePrompt || '');
       setKeepPrompt(project.keepPrompt || '');
@@ -525,7 +525,7 @@ const App: React.FC = () => {
     pushHistory();
     setIsLoading(true);
     setError(null);
-    setStatus('Generating room preview');
+    setStatus('Generating design');
     try {
       const { finalImageUrl, finalPrompt } = await generateMultiCompositeImage(
         productsForGeneration.map((item) => ({
@@ -536,13 +536,13 @@ const App: React.FC = () => {
           rotation: item.rotation,
         })),
         sceneImage,
-        designBrief || 'Interior Creator room composition',
+        designBrief || 'Refined room composition',
       );
       const nextFile = await imageUrlToFile(finalImageUrl, `generated-${Date.now()}.jpg`);
       setSceneImage(nextFile);
       setPlacedObjects([]);
       setDebugPrompt(finalPrompt);
-      setStatus('Generated scene ready');
+      setStatus('Design ready');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed.');
       setStatus('Generation failed');
@@ -647,19 +647,19 @@ const App: React.FC = () => {
   const readinessReason = useMemo(() => {
     if (isLoading) return 'Generating...';
     if (agentStatusError) return 'AI agent status could not be checked.';
-    if (agentStatus && !agentStatus.configured) return 'AI setup required before generation can run.';
+    if (agentStatus && !agentStatus.configured) return 'AI setup required.';
     if (!agentStatus) return 'Checking AI agent...';
     if (workflow === 'mood') {
-      if (moodProducts.length === 0) return 'Select at least one product for the moodboard.';
-      if (!moodPrompt.trim()) return 'Add a moodboard direction.';
-      return 'Ready to generate.';
+      if (moodProducts.length === 0) return 'Select one product.';
+      if (!moodPrompt.trim()) return 'Add direction.';
+      return 'Ready.';
     }
-    if (!sceneImage || !selectedRoom) return 'Choose or upload a room first.';
-    if (workflow === 'stage') return stagePrompt.trim() || activeProducts.length > 0 ? 'Ready to generate.' : 'Add a staging direction.';
-    if (editMode === 'remove') return removePrompt.trim() ? 'Ready to generate.' : 'Describe or tap what to remove.';
-    if (activeProducts.length === 0 && !selectedProductFile) return 'Add at least one product or staging asset.';
-    if (!designBrief.trim()) return 'Add a design brief.';
-    return 'Ready to generate.';
+    if (!sceneImage || !selectedRoom) return 'Choose a room.';
+    if (workflow === 'stage') return stagePrompt.trim() || activeProducts.length > 0 ? 'Ready.' : 'Add staging direction.';
+    if (editMode === 'remove') return removePrompt.trim() ? 'Ready.' : 'Tap or describe item.';
+    if (activeProducts.length === 0 && !selectedProductFile) return 'Add a product.';
+    if (!designBrief.trim()) return 'Add brief.';
+    return 'Ready.';
   }, [activeProducts.length, agentStatus, agentStatusError, designBrief, editMode, isLoading, moodProducts.length, moodPrompt, removePrompt, sceneImage, selectedProductFile, selectedRoom, stagePrompt, workflow]);
 
   useEffect(() => {
@@ -756,7 +756,7 @@ const App: React.FC = () => {
   const renderRoomLibrary = () => (
     <section className="ic-library-section ic-room-library-section" aria-label="Room library">
       <div className="ic-section-heading">
-        <h3>Room Library</h3>
+        <h3>Rooms</h3>
         <div className="ic-chip-row">
           {['All', ...Array.from(new Set(SCENE_LIBRARY.map((item) => item.type)))].map((type) => (
             <button key={type} type="button" className={activeRoomCategory === type ? 'is-active' : ''} onClick={() => setActiveRoomCategory(type)}>
@@ -776,7 +776,7 @@ const App: React.FC = () => {
             }}
           />
           <span className="ic-upload-box">Upload</span>
-          <span>Upload Room</span>
+          <span>Room</span>
         </label>
         {filteredRooms.map((room) => (
           <button key={room.id} type="button" className="ic-asset-tile" onClick={() => loadRoomFromLibrary(room)}>
@@ -791,7 +791,7 @@ const App: React.FC = () => {
   const renderProductLibrary = (mode: 'place' | 'mood' = 'place') => (
     <section className="ic-library-section ic-product-library-section" aria-label="Product library">
       <div className="ic-section-heading">
-        <h3>{mode === 'mood' ? 'Mood Products' : 'Product Library'} <span className="ic-count">({filteredProducts.length})</span></h3>
+        <h3>{mode === 'mood' ? 'References' : 'Products'} <span className="ic-count">({filteredProducts.length})</span></h3>
         <div className="ic-library-filters">
           <div className="ic-chip-row" aria-label="Product category">
             {['All', ...Array.from(new Set(PRODUCT_LIBRARY.map((item) => item.category)))].map((category) => (
@@ -820,7 +820,7 @@ const App: React.FC = () => {
             }}
           />
           <span className="ic-upload-box">Upload</span>
-          <span>Upload Product</span>
+          <span>Product</span>
         </label>
         {filteredProducts.map((product) => {
           const isMoodSelected = moodProducts.some((item) => item.url === product.thumbnailUrl);
@@ -854,7 +854,7 @@ const App: React.FC = () => {
           );
         })}
         {filteredProducts.length === 0 && (
-          <p className="ic-library-empty">No products found in this category.</p>
+          <p className="ic-library-empty">No products in this category.</p>
         )}
       </div>
     </section>
@@ -865,7 +865,7 @@ const App: React.FC = () => {
       <div className="ic-canvas-toolbar">
         <div>
           <p>{workflowLabels[workflow]}</p>
-          <h2>{sceneImage ? 'Room Canvas' : 'Add Room Scene'}</h2>
+          <h2>{sceneImage ? 'Canvas' : 'Choose a Room'}</h2>
         </div>
         <div className="ic-inline-actions">
           <button type="button" onClick={saveToGallery} disabled={!hasGenerated || !generatedImageUrl}>
@@ -899,7 +899,7 @@ const App: React.FC = () => {
           onScenePointSelect={editMode === 'remove' ? (position, relative) => {
             setRemoveTargetPosition(position);
             setRemovePrompt(`item around ${Math.round(relative.xPercent)}% from the left and ${Math.round(relative.yPercent)}% from the top`);
-            setStatus('Removal target selected. Click Generate to remove it.');
+            setStatus('Target selected. Generate to clean the scene.');
           } : undefined}
           showPerspectiveGrid={editMode === 'add' && (!!selectedProduct || isTouchDragging || isTouchHovering)}
           isTouchHovering={isTouchHovering}
@@ -910,11 +910,11 @@ const App: React.FC = () => {
       </div>
       {!sceneImage && (
         <div className="ic-recovery-panel">
-          <p>Default images could not be loaded. You can upload your own image or continue with a blank project.</p>
+          <p>Choose an image or start with a blank canvas.</p>
           <div className="ic-action-strip">
-            <button type="button" onClick={() => recoveryUploadRef.current?.click()}>Upload Image</button>
+            <button type="button" onClick={() => recoveryUploadRef.current?.click()}>Upload</button>
             <button type="button" onClick={loadFallbackRoom}>Retry</button>
-            <button type="button" onClick={continueBlankProject}>Continue Blank Project</button>
+            <button type="button" onClick={continueBlankProject}>Blank</button>
           </div>
         </div>
       )}
@@ -922,9 +922,9 @@ const App: React.FC = () => {
         <div className="ic-recovery-panel">
           <p>{assetLoadWarning}</p>
           <div className="ic-action-strip">
-            <button type="button" onClick={() => recoveryUploadRef.current?.click()}>Upload Image</button>
+            <button type="button" onClick={() => recoveryUploadRef.current?.click()}>Upload</button>
             <button type="button" onClick={loadFallbackRoom}>Retry</button>
-            <button type="button" onClick={continueBlankProject}>Continue Blank Project</button>
+            <button type="button" onClick={continueBlankProject}>Blank</button>
           </div>
         </div>
       )}
@@ -946,51 +946,51 @@ const App: React.FC = () => {
   const renderEditorControls = () => (
     <section className="ic-controls-panel">
       <div className="ic-section-heading">
-        <h3>{workflow === 'mood' ? 'Moodboard Direction' : 'Add or Remove Products'}</h3>
+        <h3>{workflow === 'mood' ? 'Direction' : 'Edit'}</h3>
         <p>{status}</p>
       </div>
       {workflow !== 'mood' && (
         <div className="ic-editor-tools" aria-label="Editor tools">
           <button type="button" onClick={() => setIsMeasureMode(true)} disabled={!sceneImage}>
-            <Ruler size={15} /> Measure room
+            <Ruler size={15} /> Measure
           </button>
           <button type="button" className={editMode === 'remove' ? 'is-active' : ''} onClick={() => setEditMode('remove')} disabled={!sceneImage}>
-            Remove by clicking item
+            Remove
           </button>
         </div>
       )}
       {workflow === 'design' && (
         <>
           <div className="ic-mode-toggle">
-            <button type="button" className={editMode === 'add' ? 'is-active' : ''} onClick={() => setEditMode('add')}>Add Products</button>
-            <button type="button" className={editMode === 'remove' ? 'is-active' : ''} onClick={() => setEditMode('remove')}>Remove Item</button>
+            <button type="button" className={editMode === 'add' ? 'is-active' : ''} onClick={() => setEditMode('add')}>Add</button>
+            <button type="button" className={editMode === 'remove' ? 'is-active' : ''} onClick={() => setEditMode('remove')}>Remove</button>
           </div>
           {editMode === 'add' && (
-            <textarea value={designBrief} onChange={(event) => setDesignBrief(event.target.value)} placeholder="Describe the design brief." />
+            <textarea value={designBrief} onChange={(event) => setDesignBrief(event.target.value)} placeholder="Design direction" />
           )}
           {editMode === 'remove' && (
             <>
-              <p className="ic-small-note">Click or tap the item in the room image, then Generate to remove it.</p>
-              <textarea value={removePrompt} onChange={(event) => setRemovePrompt(event.target.value)} placeholder="Tap the room or describe what to remove." />
+              <p className="ic-small-note">Tap the item, then generate.</p>
+              <textarea value={removePrompt} onChange={(event) => setRemovePrompt(event.target.value)} placeholder="Item to remove" />
             </>
           )}
         </>
       )}
       {workflow === 'stage' && (
         <>
-          <textarea value={stagePrompt} onChange={(event) => setStagePrompt(event.target.value)} placeholder="Describe the listing staging style." />
-          <input value={keepPrompt} onChange={(event) => setKeepPrompt(event.target.value)} placeholder="Keep items" />
-          <input value={stageRemovePrompt} onChange={(event) => setStageRemovePrompt(event.target.value)} placeholder="Remove items" />
+          <textarea value={stagePrompt} onChange={(event) => setStagePrompt(event.target.value)} placeholder="Staging direction" />
+          <input value={keepPrompt} onChange={(event) => setKeepPrompt(event.target.value)} placeholder="Keep" />
+          <input value={stageRemovePrompt} onChange={(event) => setStageRemovePrompt(event.target.value)} placeholder="Remove" />
         </>
       )}
       {workflow === 'mood' && (
         <>
-          <textarea value={moodPrompt} onChange={(event) => setMoodPrompt(event.target.value)} placeholder="Describe the moodboard direction." />
-          <p className="ic-small-note">{moodProducts.length} products selected</p>
+          <textarea value={moodPrompt} onChange={(event) => setMoodPrompt(event.target.value)} placeholder="Mood direction" />
+          <p className="ic-small-note">{moodProducts.length} selected</p>
         </>
       )}
       <label className="ic-range-label">
-        <span>Ambient Light</span>
+        <span>Light</span>
         <strong>{ambientLight}%</strong>
         <input type="range" min="70" max="135" value={ambientLight} onChange={(event) => setAmbientLight(Number(event.target.value))} />
       </label>
@@ -1000,12 +1000,12 @@ const App: React.FC = () => {
   const renderGenerateControls = () => (
     <section className="ic-controls-panel">
       <div className="ic-section-heading">
-        <h3>Generate and Export</h3>
+        <h3>Output</h3>
         <p>{readinessReason}</p>
       </div>
       {(!isAgentReady || agentStatusError) && (
         <div className="ic-agent-status">
-          <span>{agentStatusError || 'AI setup required. Add OPENAI_API_KEY to the Vercel project, then retry.'}</span>
+          <span>{agentStatusError || 'AI setup required. Add OPENAI_API_KEY in Vercel.'}</span>
           <button type="button" onClick={refreshAgentStatus}>Retry</button>
         </div>
       )}
@@ -1026,7 +1026,7 @@ const App: React.FC = () => {
       {workflow === 'mood' && moodboardImageUrl && (
         <div className="ic-output-preview">
           <img src={moodboardImageUrl} alt="Generated moodboard" />
-          <a href={moodboardImageUrl} download="interior-creator-moodboard.jpg">Download Moodboard</a>
+          <a href={moodboardImageUrl} download="interior-creator-moodboard.jpg">Download</a>
         </div>
       )}
     </section>
@@ -1058,9 +1058,9 @@ const App: React.FC = () => {
 
       <main className="ic-workspace">
         <section className="ic-hero-compact">
-          <p>Interior Creator</p>
+          <p>Powered by Downtown Perks</p>
           <h1>Design Your Space <span>In Seconds</span></h1>
-          <p>Upload a room, choose products, arrange the scene, then generate a polished design.</p>
+          <p>Choose a room, place real products, then generate a polished edit.</p>
         </section>
 
         <nav className="ic-workflow-switcher" aria-label="Workspace workflow">
@@ -1126,7 +1126,7 @@ const App: React.FC = () => {
               <button type="button" onClick={() => setIsGalleryOpen(false)} aria-label="Close gallery"><X size={20} /></button>
             </div>
             {gallery.length === 0 ? (
-              <p className="ic-small-note">No saved designs yet. Use Heart after generating a scene or moodboard.</p>
+              <p className="ic-small-note">No saved designs yet. Heart a generated image to keep it here.</p>
             ) : (
               <div className="ic-gallery-grid">
                 {gallery.map((item) => (
