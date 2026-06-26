@@ -30,18 +30,18 @@ const product = (
 ): ProductLibraryItem => ({
   id,
   name,
-  brand: options.brand || 'Interior Creator',
+  brand: options.brand || 'Interior Creator Cutout',
   category,
   subCategory,
   thumbnailUrl: `/images/product-library/${id}.png`,
-  styleTags: options.styleTags || ['modern', 'minimal', 'staging-ready'],
+  styleTags: options.styleTags || ['individual-item', 'transparent-cutout', 'staging-ready'],
   roomTypes,
-  materials: options.materials || ['wood', 'linen', 'stone', 'metal'],
-  colorPalette: options.colorPalette || ['navy', 'cream', 'warm oak', 'cold gold'],
+  materials: options.materials || ['mixed material'],
+  colorPalette: options.colorPalette || ['neutral', 'warm wood', 'soft grey', 'cold gold'],
   recommendedFor: options.recommendedFor || roomTypes,
   promptKeywords,
-  premiumScore: options.premiumScore || 88,
-  legendsFitScore: options.legendsFitScore || 90,
+  premiumScore: options.premiumScore || 86,
+  legendsFitScore: options.legendsFitScore || 88,
   sourceUrl: options.sourceUrl,
   price: options.price,
   dimensions: options.dimensions,
@@ -49,62 +49,73 @@ const product = (
 });
 
 export const PRODUCT_LIBRARY: ProductLibraryItem[] = [
-  product('cream-track-sofa', 'Cream Track Sofa', 'Furniture', 'Sofa', ['living-room', 'listing'], ['cream sofa', 'track arm sofa', 'neutral upholstered seating'], {
-    materials: ['linen', 'wood'],
+  product('sectional-01', 'Sectional Sofa', 'Furniture', 'Sofa', ['living-room', 'listing'], ['sectional sofa cutout', 'individual sectional', 'large lounge seating'], {
+    materials: ['upholstery'],
   }),
-  product('green-tufted-sofa', 'Green Tufted Sofa', 'Furniture', 'Sofa', ['living-room', 'listing'], ['green tufted sofa', 'editorial lounge seating'], {
-    materials: ['velvet', 'wood'],
+  product('sofa-01', 'Track Arm Sofa', 'Furniture', 'Sofa', ['living-room', 'listing'], ['sofa cutout', 'individual sofa', 'neutral upholstered sofa'], {
+    materials: ['upholstery'],
   }),
-  product('muse-sofa', 'Muse Modular Sofa', 'Furniture', 'Sofa', ['living-room', 'listing', 'moodboard'], ['cream modular sofa', 'soft rounded sofa', 'contemporary sofa'], {
-    brand: 'Sourced Product',
-    sourceType: 'Sourced',
-    materials: ['boucle', 'upholstery'],
+  product('sofa-02', 'Compact Sofa', 'Furniture', 'Sofa', ['living-room', 'apartment', 'listing'], ['compact sofa cutout', 'individual small sofa'], {
+    materials: ['upholstery'],
   }),
-  product('womb-chair', 'Womb Chair', 'Furniture', 'Chair', ['living-room', 'bedroom', 'moodboard'], ['blue womb chair', 'accent lounge chair', 'sculptural chair'], {
-    brand: 'Sourced Product',
-    sourceType: 'Sourced',
-    materials: ['fabric', 'metal'],
+  product('accent-chair-01', 'Accent Chair', 'Furniture', 'Chair', ['living-room', 'bedroom', 'moodboard'], ['accent chair cutout', 'individual lounge chair'], {
+    materials: ['upholstery', 'metal'],
   }),
-  product('woven-lounge-chair', 'Woven Lounge Chair', 'Furniture', 'Chair', ['living-room', 'bedroom'], ['woven lounge chair', 'wood frame chair', 'natural accent chair'], {
-    materials: ['wood', 'woven cord'],
+  product('lounge-chair-01', 'Lounge Chair', 'Furniture', 'Chair', ['living-room', 'bedroom'], ['lounge chair cutout', 'individual reading chair'], {
+    materials: ['upholstery', 'metal'],
   }),
-  product('blue-accent-chair', 'Blue Accent Chair', 'Furniture', 'Chair', ['living-room', 'bedroom'], ['blue accent chair', 'compact lounge chair'], {
-    materials: ['fabric', 'wood'],
+  product('dining-chair-01', 'Dining Chair', 'Furniture', 'Chair', ['dining-room', 'kitchen'], ['dining chair cutout', 'individual side chair'], {
+    materials: ['upholstery', 'metal'],
   }),
-  product('dining-round-table-set', 'Round Dining Set', 'Furniture', 'Dining', ['dining-room', 'kitchen', 'listing'], ['round dining table', 'woven dining chairs', 'dining set'], {
-    materials: ['wood', 'stone', 'woven cord'],
+  product('bar-stool-01', 'Counter Stool', 'Furniture', 'Seating', ['kitchen', 'dining-room'], ['counter stool cutout', 'individual bar stool'], {
+    materials: ['upholstery', 'metal'],
   }),
-  product('wire-coffee-table', 'Wire Base Coffee Table', 'Furniture', 'Table', ['living-room', 'moodboard'], ['round coffee table', 'wire base table'], {
+  product('coffee-table-01', 'Coffee Table', 'Furniture', 'Table', ['living-room', 'moodboard'], ['coffee table cutout', 'individual coffee table'], {
     materials: ['wood', 'metal'],
   }),
-  product('round-side-table', 'Round Side Table', 'Furniture', 'Table', ['living-room', 'bedroom'], ['round side table', 'small accent table'], {
-    materials: ['stone', 'metal'],
-  }),
-  product('slim-console-table', 'Slim Console Table', 'Furniture', 'Console', ['living-room', 'entry'], ['slim console table', 'hairpin console', 'entry table'], {
+  product('side-table-01', 'Side Table', 'Furniture', 'Table', ['living-room', 'bedroom'], ['side table cutout', 'individual accent table'], {
     materials: ['wood', 'metal'],
   }),
-  product('media-console', 'Low Media Console', 'Furniture', 'Console', ['living-room', 'listing'], ['low media console', 'modern media cabinet'], {
+  product('dining-table-01', 'Dining Table', 'Furniture', 'Dining', ['dining-room', 'kitchen', 'listing'], ['dining table cutout', 'individual dining table'], {
     materials: ['wood', 'metal'],
   }),
-  product('black-storage-cabinet', 'Black Storage Cabinet', 'Furniture', 'Storage', ['living-room', 'dining-room', 'bedroom'], ['black storage cabinet', 'modern cabinet'], {
-    materials: ['wood', 'metal'],
+  product('floor-lamp-01', 'Floor Lamp', 'Lighting', 'Floor Lamp', ['living-room', 'bedroom', 'listing'], ['floor lamp cutout', 'individual standing lamp'], {
+    materials: ['metal', 'fabric shade'],
   }),
-  product('linen-platform-bed', 'Linen Platform Bed', 'Furniture', 'Bed', ['bedroom', 'listing'], ['linen platform bed', 'neutral bed', 'upholstered bed'], {
-    materials: ['linen', 'wood'],
+  product('table-lamp-01', 'Table Lamp', 'Lighting', 'Table Lamp', ['bedroom', 'living-room'], ['table lamp cutout', 'individual lamp'], {
+    materials: ['metal', 'fabric shade'],
   }),
-  product('marble-kitchen-island', 'Marble Kitchen Island', 'Furniture', 'Kitchen', ['kitchen', 'listing'], ['marble kitchen island', 'waterfall island'], {
-    materials: ['marble', 'metal'],
+  product('pendant-light-01', 'Pendant Light', 'Lighting', 'Pendant', ['living-room', 'dining-room', 'kitchen'], ['pendant light cutout', 'individual hanging light'], {
+    materials: ['metal', 'fabric shade'],
   }),
-  product('wood-kitchen-island', 'Wood Kitchen Island', 'Furniture', 'Kitchen', ['kitchen', 'listing'], ['wood kitchen island', 'warm kitchen storage'], {
-    materials: ['wood', 'stone'],
+  product('area-rug-01', 'Area Rug', 'Textiles', 'Rug', ['living-room', 'bedroom', 'listing'], ['area rug cutout', 'individual rug'], {
+    materials: ['woven textile'],
   }),
-  product('white-counter-stools', 'White Counter Stools', 'Furniture', 'Seating', ['kitchen', 'dining-room'], ['white counter stools', 'bar stools'], {
-    materials: ['wood', 'upholstery'],
+  product('runner-rug-01', 'Runner Rug', 'Textiles', 'Rug', ['entry', 'kitchen', 'hallway'], ['runner rug cutout', 'individual runner rug'], {
+    materials: ['woven textile'],
   }),
-  product('linear-pendant-light', 'Linear Pendant Light', 'Lighting', 'Pendant', ['living-room', 'dining-room', 'kitchen'], ['linear pendant light', 'modern chandelier'], {
-    materials: ['glass', 'metal'],
+  product('monstera-01', 'Monstera Plant', 'Decor', 'Plant', ['living-room', 'bedroom', 'moodboard'], ['monstera plant cutout', 'individual potted plant'], {
+    materials: ['ceramic', 'greenery'],
+    colorPalette: ['green', 'warm clay', 'cream'],
   }),
-  product('bedside-table-lamp', 'Bedside Table Lamp', 'Lighting', 'Table Lamp', ['bedroom', 'living-room'], ['bedside table lamp', 'ambient lamp'], {
-    materials: ['linen', 'metal'],
+  product('olive-tree-01', 'Olive Tree', 'Decor', 'Plant', ['living-room', 'bedroom', 'listing'], ['olive tree cutout', 'individual potted tree'], {
+    materials: ['ceramic', 'greenery'],
+    colorPalette: ['green', 'warm clay', 'cream'],
+  }),
+  product('potted-plant-01', 'Potted Plant', 'Decor', 'Plant', ['living-room', 'bedroom', 'moodboard'], ['potted plant cutout', 'individual decor plant'], {
+    materials: ['ceramic', 'greenery'],
+    colorPalette: ['green', 'warm clay', 'cream'],
+  }),
+  product('vase-01', 'Ceramic Vase', 'Decor', 'Vase', ['living-room', 'dining-room', 'moodboard'], ['vase cutout', 'individual ceramic vase'], {
+    materials: ['ceramic'],
+  }),
+  product('wall-art-01', 'Wall Art', 'Decor', 'Art', ['living-room', 'bedroom', 'moodboard'], ['wall art cutout', 'individual framed art'], {
+    materials: ['paper', 'frame'],
+  }),
+  product('mirror-01', 'Wall Mirror', 'Decor', 'Mirror', ['living-room', 'bedroom', 'entry'], ['mirror cutout', 'individual wall mirror'], {
+    materials: ['glass', 'frame'],
+  }),
+  product('espresso-machine-01', 'Espresso Machine', 'Kitchen', 'Appliance', ['kitchen', 'moodboard'], ['espresso machine cutout', 'individual kitchen appliance'], {
+    materials: ['metal', 'plastic'],
   }),
 ];

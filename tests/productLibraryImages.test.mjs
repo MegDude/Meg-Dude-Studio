@@ -32,6 +32,16 @@ print('\\n'.join(opaque))
   { encoding: 'utf8' }
 ).trim();
 const requiredProductIds = [
+  'sectional-01',
+  'sofa-01',
+  'accent-chair-01',
+  'coffee-table-01',
+  'floor-lamp-01',
+  'area-rug-01',
+  'monstera-01',
+  'wall-art-01',
+];
+const removedInSituIds = [
   'cream-track-sofa',
   'green-tufted-sofa',
   'muse-sofa',
@@ -41,11 +51,13 @@ const requiredProductIds = [
   'bedside-table-lamp',
 ];
 const missingProductIds = requiredProductIds.filter((id) => !source.includes(`'${id}'`));
+const staleInSituIds = removedInSituIds.filter((id) => source.includes(`'${id}'`));
 
-assert.equal(productCount, 18, `Expected the rebuilt 18-product library, found ${productCount}.`);
+assert.equal(productCount, 22, `Expected the 22-item cutout product library, found ${productCount}.`);
 assert.equal(missing.length, 0, `Missing product images:\n${missing.join('\n')}`);
 assert.equal(nonProductLibraryPaths.length, 0, `Product library must use rebuilt local product images only:\n${nonProductLibraryPaths.join('\n')}`);
-assert.equal(missingProductIds.length, 0, `Missing rebuilt catalog products:\n${missingProductIds.join('\n')}`);
+assert.equal(missingProductIds.length, 0, `Missing product-only cutout catalog products:\n${missingProductIds.join('\n')}`);
+assert.equal(staleInSituIds.length, 0, `Old in-situ product IDs must not remain:\n${staleInSituIds.join('\n')}`);
 assert.equal(alphaReport, '', `Product images must have transparent alpha:\n${alphaReport}`);
 
 console.log(`product library image tests passed: ${productCount} products, ${uniqueImagePaths.length} local image paths`);
