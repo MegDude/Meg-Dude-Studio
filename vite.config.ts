@@ -11,7 +11,11 @@ export default defineConfig(({ mode }) => {
       if (!apiKey) {
         return {
           status: 503,
-          body: JSON.stringify({ error: 'OPENAI_API_KEY is not configured.' }),
+          body: JSON.stringify({
+            error: 'OPENAI_API_KEY is not configured.',
+            code: 'OPENAI_API_KEY_MISSING',
+            missing: ['OPENAI_API_KEY'],
+          }),
         };
       }
 
@@ -45,6 +49,19 @@ export default defineConfig(({ mode }) => {
           name: 'openai-local-api',
           configureServer(server) {
             server.middlewares.use('/api/openai-responses', async (req, res) => {
+              if (req.method === 'GET') {
+                const apiKey = env.OPENAI_API_KEY || env.VITE_OPENAI_API_KEY || process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+                res.statusCode = 200;
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({
+                  configured: Boolean(apiKey),
+                  provider: 'openai',
+                  model: openAIModel,
+                  missing: apiKey ? [] : ['OPENAI_API_KEY'],
+                }));
+                return;
+              }
+
               if (req.method !== 'POST') {
                 res.statusCode = 405;
                 res.setHeader('Content-Type', 'application/json');

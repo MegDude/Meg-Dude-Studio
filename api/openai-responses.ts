@@ -1,14 +1,29 @@
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
 
 export default async function handler(req: any, res: any) {
+  const apiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
+
+  if (req.method === 'GET') {
+    res.status(200).json({
+      configured: Boolean(apiKey),
+      provider: 'openai',
+      model: process.env.OPENAI_IMAGE_MODEL || process.env.VITE_OPENAI_IMAGE_MODEL || 'gpt-5.5',
+      missing: apiKey ? [] : ['OPENAI_API_KEY'],
+    });
+    return;
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed.' });
     return;
   }
 
-  const apiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
   if (!apiKey) {
-    res.status(503).json({ error: 'OPENAI_API_KEY is not configured.' });
+    res.status(503).json({
+      error: 'OPENAI_API_KEY is not configured.',
+      code: 'OPENAI_API_KEY_MISSING',
+      missing: ['OPENAI_API_KEY'],
+    });
     return;
   }
 

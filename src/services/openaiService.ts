@@ -18,6 +18,7 @@ type OpenAIInputPart =
 const OPENAI_RESPONSES_URL = '/api/openai-responses';
 const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-5.5';
 const MAX_DIMENSION = 1024;
+const AGENT_CONFIG_ERROR_CODE = 'OPENAI_API_KEY_MISSING';
 
 const getOpenAIImageModel = (): string => {
   return (
@@ -194,7 +195,22 @@ const callOpenAIResponses = async (
 
   if (!response.ok) {
     const details = await response.text().catch(() => '');
-    throw new Error(`OpenAI request failed (${response.status}). ${details}`);
+    let message = details;
+    let code = '';
+    try {
+      const parsed = JSON.parse(details);
+      message = parsed.error || details;
+      code = parsed.code || '';
+    } catch {
+      // Keep the raw response text.
+    }
+    const error = new Error(
+      code === AGENT_CONFIG_ERROR_CODE
+        ? 'OpenAI agent is not configured. Add OPENAI_API_KEY in Vercel, then redeploy.'
+        : `OpenAI request failed (${response.status}). ${message}`
+    );
+    if (code) error.name = code;
+    throw error;
   }
 
   return response.json();
@@ -333,6 +349,9 @@ const withOpenAIImageFallback = async (
       finalPrompt: prompt,
     };
   } catch (error) {
+    if (error instanceof Error && error.name === AGENT_CONFIG_ERROR_CODE) {
+      throw error;
+    }
     console.error('OpenAI generation failed:', error);
     return {
       finalImageUrl: await fallback(),

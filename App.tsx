@@ -13,6 +13,12 @@ import { FALLBACK_DESIGN_IMAGES, canGenerateDesign } from './src/lib/defaultImag
 
 type Workflow = 'design' | 'stage' | 'mood';
 type EditMode = 'add' | 'remove';
+type AgentStatus = {
+  configured: boolean;
+  provider: string;
+  model?: string;
+  missing?: string[];
+};
 
 type SceneLibraryItem = {
   id: string;
@@ -204,6 +210,8 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [assetLoadWarning, setAssetLoadWarning] = useState<string | null>(null);
   const [status, setStatus] = useState('Ready');
+  const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
+  const [agentStatusError, setAgentStatusError] = useState<string | null>(null);
   const [debugPrompt, setDebugPrompt] = useState<string | null>(null);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [isMeasureMode, setIsMeasureMode] = useState(false);
@@ -221,6 +229,7 @@ const App: React.FC = () => {
   const activeProducts = placedObjects.filter((item) => item.isVisible !== false);
   const generatedImageUrl = workflow === 'mood' ? moodboardImageUrl : sceneImageUrl;
   const hasGenerated = !!debugPrompt || !!moodboardImageUrl;
+  const isAgentReady = agentStatus?.configured === true;
   const filteredRooms = useMemo(() => (
     SCENE_LIBRARY.filter((room) => activeRoomCategory === 'All' || room.type === activeRoomCategory)
   ), [activeRoomCategory]);
@@ -623,7 +632,7 @@ const App: React.FC = () => {
     : workflow === 'stage' ? generateStage : generateMood;
 
   const canGenerate = workflow === 'design'
-    ? canGenerateDesign({
+    ? isAgentReady && canGenerateDesign({
       hasScene: !!sceneImage && !!selectedRoom,
       editMode,
       removePrompt,
@@ -632,11 +641,14 @@ const App: React.FC = () => {
       designBrief,
     })
     : workflow === 'stage'
-      ? !!sceneImage && !!selectedRoom && (!!stagePrompt.trim() || activeProducts.length > 0)
-      : moodProducts.length > 0 && !!moodPrompt.trim();
+      ? isAgentReady && !!sceneImage && !!selectedRoom && (!!stagePrompt.trim() || activeProducts.length > 0)
+      : isAgentReady && moodProducts.length > 0 && !!moodPrompt.trim();
 
   const readinessReason = useMemo(() => {
     if (isLoading) return 'Generating...';
+    if (agentStatusError) return 'AI agent status could not be checked.';
+    if (agentStatus && !agentStatus.configured) return 'AI agent needs OPENAI_API_KEY in Vercel before generation can run.';
+    if (!agentStatus) return 'Checking AI agent...';
     if (workflow === 'mood') {
       if (moodProducts.length === 0) return 'Select at least one product for the moodboard.';
       if (!moodPrompt.trim()) return 'Add a moodboard direction.';
@@ -648,7 +660,7 @@ const App: React.FC = () => {
     if (activeProducts.length === 0 && !selectedProductFile) return 'Add at least one product or staging asset.';
     if (!designBrief.trim()) return 'Add a design brief.';
     return 'Ready to generate.';
-  }, [activeProducts.length, designBrief, editMode, isLoading, moodProducts.length, moodPrompt, removePrompt, sceneImage, selectedProductFile, selectedRoom, stagePrompt, workflow]);
+  }, [activeProducts.length, agentStatus, agentStatusError, designBrief, editMode, isLoading, moodProducts.length, moodPrompt, removePrompt, sceneImage, selectedProductFile, selectedRoom, stagePrompt, workflow]);
 
   useEffect(() => {
     try {
@@ -659,6 +671,23 @@ const App: React.FC = () => {
       setGallery([]);
     }
   }, []);
+
+  const refreshAgentStatus = useCallback(async () => {
+    try {
+      const response = await fetch('/api/openai-responses');
+      if (!response.ok) throw new Error(`Agent status failed (${response.status}).`);
+      const nextStatus = await response.json();
+      setAgentStatus(nextStatus);
+      setAgentStatusError(null);
+    } catch (err) {
+      setAgentStatus(null);
+      setAgentStatusError(err instanceof Error ? err.message : 'Could not check AI agent status.');
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshAgentStatus();
+  }, [refreshAgentStatus]);
 
   useEffect(() => {
     const onError = (event: ErrorEvent) => {
@@ -974,6 +1003,12 @@ const App: React.FC = () => {
         <h3>Generate and Export</h3>
         <p>{readinessReason}</p>
       </div>
+      {(!isAgentReady || agentStatusError) && (
+        <div className="ic-agent-status">
+          <span>{agentStatusError || 'OpenAI agent is not connected. Add OPENAI_API_KEY in Vercel, then retry.'}</span>
+          <button type="button" onClick={refreshAgentStatus}>Retry</button>
+        </div>
+      )}
       <div className="ic-action-strip">
         <button type="button" onClick={primaryGenerate} disabled={!canGenerate || isLoading}>
           <Sparkles size={15} /> Generate

@@ -467,6 +467,35 @@ img {
   color: #9f1d1d;
 }
 
+.ic-agent-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--ic-border);
+  border-bottom: 1px solid var(--ic-border);
+  padding: 10px 0;
+  color: rgba(11, 31, 51, 0.66);
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.ic-agent-status button {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: var(--ic-navy);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.ic-agent-status button:hover,
+.ic-agent-status button:focus-visible {
+  color: var(--ic-gold);
+  outline: none;
+}
+
 .ic-recovery-panel {
   display: grid;
   gap: 8px;
