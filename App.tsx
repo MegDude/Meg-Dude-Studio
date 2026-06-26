@@ -7,14 +7,12 @@ import ImageUploader from './components/ImageUploader';
 import TouchGhost from './components/TouchGhost';
 import MeasureOverlay from './components/MeasureOverlay';
 import BeforeAfterModal from './components/BeforeAfterModal';
-import DebugModal from './components/DebugModal';
 import Spinner from './components/Spinner';
 import { ImageWithFallback } from './components/ImageWithFallback';
 import { FALLBACK_DESIGN_IMAGES, canGenerateDesign } from './src/lib/defaultImageFallback.js';
 
 type Workflow = 'design' | 'stage' | 'mood';
 type EditMode = 'add' | 'remove';
-type ProductSourceFilter = 'All' | 'Catalog' | 'Sourced';
 
 type SceneLibraryItem = {
   id: string;
@@ -49,18 +47,6 @@ type HistorySnapshot = {
   selectedRoom: SelectedRoom | null;
   sceneImage: File | null;
   placedObjects: PlacedObject[];
-};
-
-const productSourceFilters: ProductSourceFilter[] = ['All', 'Catalog', 'Sourced'];
-
-const getProductSourceLabel = (product: ProductLibraryItem) => {
-  if (product.sourceType === 'Sourced') return 'Sourced product';
-  return 'Product catalog';
-};
-
-const matchesProductSource = (product: ProductLibraryItem, source: ProductSourceFilter) => {
-  if (source === 'All') return true;
-  return (product.sourceType || 'Catalog') === source;
 };
 
 const productSourceRank = (product: ProductLibraryItem) => {
@@ -219,8 +205,6 @@ const App: React.FC = () => {
   const [assetLoadWarning, setAssetLoadWarning] = useState<string | null>(null);
   const [status, setStatus] = useState('Ready');
   const [debugPrompt, setDebugPrompt] = useState<string | null>(null);
-  const [debugImageUrl, setDebugImageUrl] = useState<string | null>(null);
-  const [isDebugOpen, setIsDebugOpen] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [isMeasureMode, setIsMeasureMode] = useState(false);
   const [isTouchDragging, setIsTouchDragging] = useState(false);
@@ -229,7 +213,6 @@ const App: React.FC = () => {
   const [touchOrbPosition, setTouchOrbPosition] = useState<{ x: number; y: number } | null>(null);
   const [activeRoomCategory, setActiveRoomCategory] = useState('All');
   const [activeProductCategory, setActiveProductCategory] = useState('All');
-  const [activeProductSource, setActiveProductSource] = useState<ProductSourceFilter>('All');
   const sceneImgRef = useRef<HTMLImageElement>(null);
   const recoveryUploadRef = useRef<HTMLInputElement>(null);
 
@@ -244,10 +227,9 @@ const App: React.FC = () => {
   const filteredProducts = useMemo(() => (
     PRODUCT_LIBRARY
       .filter((product) => activeProductCategory === 'All' || product.category === activeProductCategory)
-      .filter((product) => matchesProductSource(product, activeProductSource))
       .slice()
       .sort((a, b) => productSourceRank(a) - productSourceRank(b) || a.name.localeCompare(b.name))
-  ), [activeProductCategory, activeProductSource]);
+  ), [activeProductCategory]);
 
   const setNewScene = useCallback(async (file: File, room?: SelectedRoom) => {
     setSceneImage(file);
@@ -262,7 +244,6 @@ const App: React.FC = () => {
     setSelectedProductFile(null);
     setMoodboardImageUrl(null);
     setDebugPrompt(null);
-    setDebugImageUrl(null);
     setOriginalSceneBase64(await fileToBase64(file));
     setStatus(room?.name ? `${room.name} selected` : 'Uploaded room selected');
     setAssetLoadWarning(null);
@@ -506,7 +487,6 @@ const App: React.FC = () => {
     setMoodProducts([]);
     setMoodboardImageUrl(null);
     setDebugPrompt(null);
-    setDebugImageUrl(null);
     setError(null);
     setStatus('New project ready');
     setHistory([]);
@@ -538,7 +518,7 @@ const App: React.FC = () => {
     setError(null);
     setStatus('Generating room preview');
     try {
-      const { finalImageUrl, debugImageUrl: debugUrl, finalPrompt } = await generateMultiCompositeImage(
+      const { finalImageUrl, finalPrompt } = await generateMultiCompositeImage(
         productsForGeneration.map((item) => ({
           image: item.image,
           description: item.description,
@@ -553,7 +533,6 @@ const App: React.FC = () => {
       setSceneImage(nextFile);
       setPlacedObjects([]);
       setDebugPrompt(finalPrompt);
-      setDebugImageUrl(debugUrl);
       setStatus('Generated scene ready');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed.');
@@ -575,7 +554,6 @@ const App: React.FC = () => {
       setPlacedObjects([]);
       setRemoveTargetPosition(null);
       setDebugPrompt(finalPrompt);
-      setDebugImageUrl(null);
       setStatus('Clean room generated');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Removal failed.');
@@ -631,7 +609,6 @@ const App: React.FC = () => {
       const { finalImageUrl, finalPrompt } = await generateMoodboard(moodProducts, moodPrompt);
       setMoodboardImageUrl(finalImageUrl);
       setDebugPrompt(finalPrompt);
-      setDebugImageUrl(null);
       setStatus('Moodboard ready');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Moodboard generation failed.');
@@ -748,7 +725,7 @@ const App: React.FC = () => {
   }, [handleCanvasDrop, isTouchDragging, selectedProduct, selectedProductFile]);
 
   const renderRoomLibrary = () => (
-    <section className="ic-library-section" aria-label="Room library">
+    <section className="ic-library-section ic-room-library-section" aria-label="Room library">
       <div className="ic-section-heading">
         <h3>Room Library</h3>
         <div className="ic-chip-row">
@@ -783,17 +760,10 @@ const App: React.FC = () => {
   );
 
   const renderProductLibrary = (mode: 'place' | 'mood' = 'place') => (
-    <section className="ic-library-section" aria-label="Product library">
+    <section className="ic-library-section ic-product-library-section" aria-label="Product library">
       <div className="ic-section-heading">
         <h3>{mode === 'mood' ? 'Mood Products' : 'Product Library'} <span className="ic-count">({filteredProducts.length})</span></h3>
         <div className="ic-library-filters">
-          <div className="ic-chip-row" aria-label="Product source">
-            {productSourceFilters.map((source) => (
-              <button key={source} type="button" className={activeProductSource === source ? 'is-active' : ''} onClick={() => setActiveProductSource(source)}>
-                {source}
-              </button>
-            ))}
-          </div>
           <div className="ic-chip-row" aria-label="Product category">
             {['All', ...Array.from(new Set(PRODUCT_LIBRARY.map((item) => item.category)))].map((category) => (
               <button key={category} type="button" className={activeProductCategory === category ? 'is-active' : ''} onClick={() => setActiveProductCategory(category)}>
@@ -850,7 +820,7 @@ const App: React.FC = () => {
             >
               <ImageWithFallback src={product.thumbnailUrl} productName={product.name} productId={product.id} alt={product.name} />
               <span>{product.name}</span>
-              <small>{getProductSourceLabel(product)}</small>
+              <small>{product.subCategory}</small>
             </button>
           );
         })}
@@ -903,8 +873,6 @@ const App: React.FC = () => {
             setStatus('Removal target selected. Click Generate to remove it.');
           } : undefined}
           showPerspectiveGrid={editMode === 'add' && (!!selectedProduct || isTouchDragging || isTouchHovering)}
-          showDebugButton={!!debugPrompt && !isLoading}
-          onDebugClick={() => setIsDebugOpen(true)}
           isTouchHovering={isTouchHovering}
           touchOrbPosition={touchOrbPosition}
           placedObjects={activeProducts}
@@ -1032,7 +1000,6 @@ const App: React.FC = () => {
   return (
     <div className="ic-app-v2">
       <BeforeAfterModal isOpen={isCompareOpen} onClose={() => setIsCompareOpen(false)} beforeImage={originalSceneUrl || sceneImageUrl || ''} afterImage={sceneImageUrl || ''} />
-      <DebugModal isOpen={isDebugOpen} onClose={() => setIsDebugOpen(false)} imageUrl={debugImageUrl} prompt={debugPrompt} />
       <TouchGhost imageUrl={isTouchDragging ? selectedProduct?.imageUrl || null : null} position={touchGhostPosition} />
 
       <header className="ic-global-header">

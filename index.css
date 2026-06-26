@@ -314,6 +314,7 @@ img {
 .ic-section-heading,
 .ic-modal-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
@@ -564,8 +565,10 @@ img {
 }
 
 .ic-library-filters {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: 7px;
+  justify-content: flex-end;
   justify-items: end;
   min-width: 0;
 }
@@ -592,7 +595,7 @@ img {
 
 .ic-asset-tile {
   display: grid;
-  flex: 0 0 92px;
+  flex: 0 0 96px;
   gap: 5px;
   min-width: 0;
   padding: 0;
@@ -610,6 +613,24 @@ img {
   border: 1px solid var(--ic-border);
   background: #fff;
   object-fit: cover;
+}
+
+.ic-product-library-section .ic-asset-grid {
+  gap: 10px;
+}
+
+.ic-product-library-section .ic-asset-tile {
+  flex-basis: 112px;
+}
+
+.ic-product-library-section .ic-asset-tile img {
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  padding: 6px;
+}
+
+.ic-product-library-section .ic-upload-box {
+  aspect-ratio: 1 / 1;
 }
 
 .ic-upload-tile {
@@ -1069,6 +1090,7 @@ img {
   }
 
   .ic-library-filters {
+    justify-content: flex-start;
     justify-items: start;
     width: 100%;
   }
@@ -1090,6 +1112,10 @@ img {
 
   .ic-asset-tile {
     flex-basis: 84px;
+  }
+
+  .ic-product-library-section .ic-asset-tile {
+    flex-basis: 104px;
   }
 
   .ic-asset-tile span {

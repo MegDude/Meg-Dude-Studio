@@ -31,8 +31,6 @@ interface ImageUploaderProps {
  onLibraryProductDrop?: (product: { url: string; name: string }, position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
  onScenePointSelect?: (position: {x: number, y: number}, relativePosition: { xPercent: number; yPercent: number; }) => void;
  persistedOrbPosition?: { x: number; y: number } | null;
- showDebugButton?: boolean;
- onDebugClick?: () => void;
  isTouchHovering?: boolean;
  touchOrbPosition?: { x: number; y: number } | null;
  placedObjects?: PlacedObject[];
@@ -52,7 +50,7 @@ const WarningIcon: React.FC = () => (
 );
 
 
-const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, label, onFileSelect, imageUrl, className = "", isDropZone = false, onProductDrop, onLibraryProductDrop, onScenePointSelect, persistedOrbPosition, showDebugButton, onDebugClick, isTouchHovering = false, touchOrbPosition = null, placedObjects = [], onObjectMove, onObjectDelete, onObjectRotate, showPerspectiveGrid = false }, ref) => {
+const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, label, onFileSelect, imageUrl, className = "", isDropZone = false, onProductDrop, onLibraryProductDrop, onScenePointSelect, persistedOrbPosition, isTouchHovering = false, touchOrbPosition = null, placedObjects = [], onObjectMove, onObjectDelete, onObjectRotate, showPerspectiveGrid = false }, ref) => {
  const inputRef = useRef<HTMLInputElement>(null);
  const imgRef = useRef<HTMLImageElement>(null);
  const [isDraggingOver, setIsDraggingOver] = useState(false);
@@ -413,19 +411,7 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  </div>
  );
  })}
- {showDebugButton && onDebugClick && (
- <button
- onClick={(e) => {
- e.stopPropagation();
- onDebugClick();
- }}
- className="absolute bottom-2 right-2 dp-panel text-navy-900 dp-kicker px-3 py-1.5 dp-radius hover:-translate-y-[1px] transition-all z-20"
- aria-label="Show debug view"
- >
- Debug
- </button>
- )}
- </>
+	 </>
  ) : (
  <div className="ic-uploader-empty text-center dp-muted">
  <UploadIcon />
