@@ -45,7 +45,7 @@ const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({ beforeImage, afte
  return (
  <div 
  ref={containerRef}
- className="relative w-full aspect-[4/3] md:aspect-[16/9] overflow-hidden rounded-xl select-none cursor-ew-resize border border-navy-200 shadow-sm"
+ className="ic-before-after-slider"
  onMouseDown={(e) => {
  setIsDragging(true);
  handleMove(e.clientX);
@@ -56,12 +56,11 @@ const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({ beforeImage, afte
  }}
  >
  {/* After Image (Background) */}
- <img src={afterImage} className="absolute inset-0 w-full h-full object-cover" draggable={false} alt="After" />
+ <img src={afterImage} draggable={false} alt="After" />
  
  {/* Before Image (Foreground, clipped) */}
  <img 
  src={beforeImage} 
- className="absolute inset-0 w-full h-full object-cover" 
  style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }} 
  draggable={false} 
  alt="Before" 
@@ -69,17 +68,17 @@ const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({ beforeImage, afte
 
  {/* Slider Handle */}
  <div 
- className="absolute top-0 bottom-0 w-1 bg-white cursor-ew-resize z-10"
+ className="ic-before-after-divider"
  style={{ left: `calc(${sliderPosition}% - 2px)` }}
  >
- <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-[10px] shadow border border-navy-200 flex items-center justify-center pointer-events-none">
- <svg className="w-4 h-4 text-navy-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l-4 4 4 4m8-8l4 4-4 4" /></svg>
+ <div className="ic-before-after-handle">
+ <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l-4 4 4 4m8-8l4 4-4 4" /></svg>
  </div>
  </div>
  
  {/* Labels */}
- <div className="absolute top-4 left-4 dp-panel text-navy-900 px-3 py-1.5 dp-radius dp-kicker pointer-events-none transition-opacity">Before</div>
- <div className="absolute top-4 right-4 dp-panel text-navy-900 px-3 py-1.5 dp-radius dp-kicker pointer-events-none transition-opacity">After</div>
+ <div className="ic-before-after-label" style={{ left: 12 }}>Before</div>
+ <div className="ic-before-after-label" style={{ right: 12 }}>After</div>
  </div>
  );
 };

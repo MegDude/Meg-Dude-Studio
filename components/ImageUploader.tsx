@@ -420,7 +420,7 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  )}
  </div>
  {fileTypeError && (
- <div className="w-full mt-2 text-[13px] font-medium dp-navy bg-[#F8F5F0] border border-[#C8A96A] dp-radius p-3 flex items-center animate-fade-in" role="alert">
+ <div className="ic-upload-error animate-fade-in" role="alert">
  <WarningIcon />
  <span>{fileTypeError}</span>
  </div>
