@@ -647,7 +647,7 @@ const App: React.FC = () => {
   const readinessReason = useMemo(() => {
     if (isLoading) return 'Generating...';
     if (agentStatusError) return 'AI agent status could not be checked.';
-    if (agentStatus && !agentStatus.configured) return 'AI agent needs OPENAI_API_KEY in Vercel before generation can run.';
+    if (agentStatus && !agentStatus.configured) return 'AI setup required before generation can run.';
     if (!agentStatus) return 'Checking AI agent...';
     if (workflow === 'mood') {
       if (moodProducts.length === 0) return 'Select at least one product for the moodboard.';
@@ -1005,7 +1005,7 @@ const App: React.FC = () => {
       </div>
       {(!isAgentReady || agentStatusError) && (
         <div className="ic-agent-status">
-          <span>{agentStatusError || 'OpenAI agent is not connected. Add OPENAI_API_KEY in Vercel, then retry.'}</span>
+          <span>{agentStatusError || 'AI setup required. Add OPENAI_API_KEY to the Vercel project, then retry.'}</span>
           <button type="button" onClick={refreshAgentStatus}>Retry</button>
         </div>
       )}
