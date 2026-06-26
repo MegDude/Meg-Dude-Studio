@@ -587,6 +587,8 @@ img {
   overflow-x: auto;
   overflow-y: hidden;
   padding: 0 2px 4px 0;
+  scroll-padding-inline: 2px;
+  scroll-snap-type: x proximity;
   scrollbar-width: thin;
 }
 
@@ -603,6 +605,7 @@ img {
   border: 0;
   background: transparent;
   color: var(--ic-navy);
+  scroll-snap-align: start;
   text-align: center;
 }
 
@@ -661,8 +664,11 @@ img {
   font-size: clamp(10px, 0.82vw, 12px);
   font-weight: 700;
   line-height: 1.16;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .ic-asset-tile small {
@@ -674,6 +680,29 @@ img {
   line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 759px) and (min-width: 431px) {
+  .ic-asset-grid {
+    gap: 12px;
+    scroll-snap-type: x mandatory;
+  }
+
+  .ic-asset-tile {
+    flex-basis: calc((100% - 12px) / 2);
+  }
+
+  .ic-product-library-section .ic-asset-tile {
+    flex-basis: calc((100% - 12px) / 2);
+  }
+
+  .ic-asset-tile span {
+    font-size: 12px;
+  }
+
+  .ic-asset-tile small {
+    font-size: 10.5px;
+  }
 }
 
 .ic-asset-tile:hover span {
@@ -1206,19 +1235,38 @@ img {
   }
 
   .ic-asset-grid {
-    gap: 7px;
+    gap: 12px;
+    padding-right: 20px;
+    scroll-snap-type: x mandatory;
   }
 
   .ic-asset-tile {
-    flex-basis: 84px;
+    flex-basis: calc(100% - 34px);
+    gap: 7px;
   }
 
   .ic-product-library-section .ic-asset-tile {
-    flex-basis: 98px;
+    flex-basis: calc(100% - 34px);
+  }
+
+  .ic-asset-tile img,
+  .ic-asset-tile > div,
+  .ic-upload-box {
+    aspect-ratio: 16 / 10;
+  }
+
+  .ic-product-library-section .ic-asset-tile img,
+  .ic-product-library-section .ic-upload-box {
+    aspect-ratio: 4 / 3;
   }
 
   .ic-asset-tile span {
-    font-size: 9.5px;
+    font-size: 13px;
+    line-height: 1.18;
+  }
+
+  .ic-asset-tile small {
+    font-size: 11px;
   }
 
   .ic-uploader-shell {
