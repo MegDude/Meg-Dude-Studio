@@ -73,8 +73,8 @@ img {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 56px;
-  padding: 0 clamp(14px, 3vw, 34px);
+  min-height: clamp(58px, 5.2vw, 72px);
+  padding: 0 clamp(14px, 3vw, 42px);
   border-bottom: 1px solid var(--ic-border);
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(18px);
@@ -108,9 +108,35 @@ img {
   transition: color 160ms ease;
 }
 
-.ic-global-header a {
-  font-size: clamp(15px, 1.2vw, 18px);
+.ic-brand-lockup {
+  min-width: 0;
+  gap: clamp(8px, 1vw, 12px) !important;
+  color: var(--ic-navy) !important;
+  font-size: clamp(15px, 1.15vw, 19px) !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
   text-transform: none;
+}
+
+.ic-brand-mark {
+  display: grid;
+  width: clamp(26px, 2.4vw, 34px);
+  height: clamp(26px, 2.4vw, 34px);
+  place-items: center;
+  flex: 0 0 auto;
+}
+
+.ic-brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ic-global-header > button {
+  width: 40px;
+  min-height: 40px;
+  padding: 0;
 }
 
 .ic-global-header button:hover,
@@ -150,14 +176,14 @@ img {
 .ic-workspace {
   width: min(100%, 1560px);
   margin: 0 auto;
-  padding: clamp(12px, 2.4vw, 36px) clamp(10px, 2.8vw, 42px) clamp(28px, 5vw, 72px);
+  padding: clamp(14px, 2.2vw, 34px) clamp(10px, 2.8vw, 42px) clamp(28px, 5vw, 72px);
 }
 
 .ic-hero-compact {
   display: grid;
-  gap: clamp(6px, 1vw, 10px);
+  gap: clamp(7px, 0.9vw, 11px);
   max-width: min(100%, 920px);
-  margin: 0 auto clamp(12px, 1.8vw, 24px);
+  margin: 0 auto clamp(14px, 1.9vw, 26px);
   text-align: center;
 }
 
@@ -170,18 +196,18 @@ img {
 
 .ic-hero-compact p:first-child {
   color: var(--ic-gold);
-  font-size: clamp(11px, 0.9vw, 13px);
-  font-weight: 800;
+  font-size: clamp(11px, 0.82vw, 12px);
+  font-weight: 700;
 }
 
 .ic-hero-compact h1 {
   margin: 0;
   color: var(--ic-navy);
   font-family: var(--ic-font);
-  font-size: clamp(24px, 4.2vw, 58px);
-  font-weight: 500;
+  font-size: clamp(26px, 4.1vw, 60px);
+  font-weight: 600;
   letter-spacing: 0;
-  line-height: 1.02;
+  line-height: 1.06;
   white-space: nowrap;
   text-wrap: nowrap;
 }
@@ -1084,10 +1110,6 @@ img {
 }
 
 @media (min-width: 1180px) {
-  .ic-global-header {
-    min-height: 66px;
-  }
-
   .ic-workspace {
     padding-top: 34px;
   }
@@ -1150,7 +1172,22 @@ img {
 
   .ic-global-header {
     padding-inline: 12px;
-    min-height: 52px;
+    min-height: 54px;
+  }
+
+  .ic-brand-lockup {
+    gap: 8px !important;
+    font-size: 14px !important;
+  }
+
+  .ic-brand-mark {
+    width: 24px;
+    height: 24px;
+  }
+
+  .ic-global-header > button {
+    width: 36px;
+    min-height: 36px;
   }
 
   .ic-hero-compact {

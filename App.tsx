@@ -1003,7 +1003,12 @@ const App: React.FC = () => {
       <TouchGhost imageUrl={isTouchDragging ? selectedProduct?.imageUrl || null : null} position={touchGhostPosition} />
 
       <header className="ic-global-header">
-        <a href="/" aria-label="Interior Creator home">Interior Creator</a>
+        <a className="ic-brand-lockup" href="/" aria-label="Interior Creator home">
+          <span className="ic-brand-mark" aria-hidden="true">
+            <img src="/images/brand/legends-gold-butterfly.avif" alt="" />
+          </span>
+          <span>Interior Creator</span>
+        </a>
         <button type="button" aria-label="Open menu" onClick={() => setIsMenuOpen((open) => !open)}>
           <Menu size={21} />
         </button>
