@@ -17,8 +17,14 @@ type OpenAIInputPart =
 
 const OPENAI_RESPONSES_URL = '/api/openai-responses';
 const DEFAULT_OPENAI_IMAGE_MODEL = 'gpt-5.5';
-const MAX_DIMENSION = 1024;
+const MAX_DIMENSION = 768;
+const TEXT_TOKEN_LIMIT = 220;
+const IMAGE_TOKEN_LIMIT = 1200;
 const AGENT_CONFIG_ERROR_CODE = 'OPENAI_API_KEY_MISSING';
+
+type OpenAIRequestOptions = {
+  maxOutputTokens?: number;
+};
 
 const getOpenAIImageModel = (): string => {
   return (
@@ -179,7 +185,8 @@ const extractGeneratedImage = (payload: any): string | null => {
 
 const callOpenAIResponses = async (
   content: OpenAIInputPart[],
-  useImageTool: boolean
+  useImageTool: boolean,
+  options: OpenAIRequestOptions = {}
 ): Promise<any> => {
   const response = await fetch(OPENAI_RESPONSES_URL, {
     method: 'POST',
@@ -189,6 +196,12 @@ const callOpenAIResponses = async (
     body: JSON.stringify({
       model: getOpenAIImageModel(),
       input: [{ role: 'user', content }],
+      store: false,
+      reasoning: { effort: 'minimal' },
+      text: { verbosity: 'low' },
+      max_output_tokens: useImageTool
+        ? IMAGE_TOKEN_LIMIT
+        : Math.min(options.maxOutputTokens ?? TEXT_TOKEN_LIMIT, TEXT_TOKEN_LIMIT),
       ...(useImageTool ? { tools: [{ type: 'image_generation' }] } : {}),
     }),
   });
@@ -235,8 +248,12 @@ const requestOpenAIImage = async (prompt: string, files: File[]): Promise<string
   return imageUrl;
 };
 
-const requestOpenAIText = async (prompt: string): Promise<string> => {
-  const payload = await callOpenAIResponses([{ type: 'input_text', text: prompt }], false);
+const requestOpenAIText = async (prompt: string, maxOutputTokens = TEXT_TOKEN_LIMIT): Promise<string> => {
+  const payload = await callOpenAIResponses(
+    [{ type: 'input_text', text: prompt }],
+    false,
+    { maxOutputTokens }
+  );
   return extractOutputText(payload);
 };
 
@@ -488,7 +505,7 @@ Return only a JSON array containing 2 or 3 complementary product integer IDs. Ex
 `;
 
   try {
-    const text = await requestOpenAIText(prompt);
+    const text = await requestOpenAIText(prompt, 80);
     const ids = JSON.parse(text);
     if (Array.isArray(ids)) {
       const validIds = new Set(unplaced.map(item => item.id));

@@ -1,4 +1,6 @@
 const OPENAI_RESPONSES_URL = 'https://api.openai.com/v1/responses';
+const TEXT_TOKEN_LIMIT = 220;
+const IMAGE_TOKEN_LIMIT = 1200;
 
 export default async function handler(req: any, res: any) {
   const apiKey = process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY;
@@ -30,6 +32,19 @@ export default async function handler(req: any, res: any) {
   try {
     const requestBody = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
     const model = requestBody.model || process.env.OPENAI_IMAGE_MODEL || process.env.VITE_OPENAI_IMAGE_MODEL || 'gpt-5.5';
+    const tools = Array.isArray(requestBody.tools) ? requestBody.tools : [];
+    const usesImageGeneration = tools.some((tool: any) => tool?.type === 'image_generation');
+    const upstreamBody = {
+      ...requestBody,
+      model,
+      store: requestBody.store ?? false,
+      reasoning: requestBody.reasoning ?? { effort: 'minimal' },
+      text: requestBody.text ?? { verbosity: 'low' },
+      max_output_tokens: Math.min(
+        requestBody.max_output_tokens ?? (usesImageGeneration ? IMAGE_TOKEN_LIMIT : TEXT_TOKEN_LIMIT),
+        usesImageGeneration ? IMAGE_TOKEN_LIMIT : TEXT_TOKEN_LIMIT
+      ),
+    };
 
     const response = await fetch(OPENAI_RESPONSES_URL, {
       method: 'POST',
@@ -37,10 +52,7 @@ export default async function handler(req: any, res: any) {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        ...requestBody,
-        model,
-      }),
+      body: JSON.stringify(upstreamBody),
     });
 
     const text = await response.text();

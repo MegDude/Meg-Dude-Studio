@@ -2080,3 +2080,73 @@ img {
     transition: none !important;
   }
 }
+
+/* Final rail alignment lock: all workspace rails start from the same left edge. */
+.ic-hero-compact {
+  margin-inline: 0 auto;
+  text-align: left;
+}
+
+.ic-workflow-switcher,
+.ic-progress-strip,
+.ic-workflow-stack {
+  margin-inline: 0 auto;
+}
+
+.ic-workflow-switcher,
+.ic-progress-strip,
+.ic-asset-grid,
+.ic-chip-row,
+.ic-inline-actions,
+.ic-action-strip,
+.ic-mode-toggle,
+.ic-editor-tools,
+.ic-library-filters {
+  justify-content: flex-start !important;
+}
+
+.ic-section-heading,
+.ic-canvas-toolbar,
+.ic-modal-header {
+  justify-content: flex-start;
+}
+
+.ic-section-heading > div:first-child,
+.ic-canvas-toolbar > div:first-child {
+  flex: 1 1 min(100%, 280px);
+}
+
+.ic-progress-strip {
+  max-width: 760px;
+}
+
+.ic-progress-strip div {
+  justify-items: start;
+  text-align: left;
+}
+
+.ic-progress-strip div:not(:last-child)::after {
+  left: 24px;
+  width: calc(100% - 24px);
+}
+
+.ic-asset-tile {
+  text-align: left;
+}
+
+.ic-asset-tile span,
+.ic-asset-tile small {
+  width: 100%;
+}
+
+@media (max-width: 640px) {
+  .ic-hero-compact h1 {
+    white-space: normal;
+    text-wrap: balance;
+  }
+
+  .ic-workflow-switcher,
+  .ic-progress-strip {
+    width: 100%;
+  }
+}

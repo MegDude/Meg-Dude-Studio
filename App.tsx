@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Heart, Menu, Ruler, Sparkles, X } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { PRODUCT_LIBRARY, ProductLibraryItem } from './src/data/productLibrary';
 import { generateMoodboard, generateMultiCompositeImage, stageRoomImage } from './src/services/openaiService';
 import { Product } from './types';
@@ -101,17 +100,6 @@ const workflowLabels: Record<Workflow, string> = {
   design: 'Design',
   stage: 'Stage',
   mood: 'Mood Studio',
-};
-
-const workflowTransition = {
-  initial: { opacity: 0, y: 14, filter: 'blur(8px)' },
-  animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
-  exit: { opacity: 0, y: -10, filter: 'blur(6px)' },
-};
-
-const workflowTransitionTiming = {
-  duration: 0.34,
-  ease: [0.22, 1, 0.36, 1] as const,
 };
 
 const fileToBase64 = (file: File): Promise<string> => (
@@ -1160,36 +1148,26 @@ const App: React.FC = () => {
           })}
         </section>
 
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.section
-            key={workflow}
-            className="ic-workflow-stack"
-            variants={workflowTransition}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={workflowTransitionTiming}
-          >
+        <section key={workflow} className="ic-workflow-stack">
+          <div className="ic-flow-step">
+            {workflow !== 'mood' && renderRoomLibrary()}
+            {workflow === 'mood' && renderProductLibrary('mood')}
+          </div>
+          {workflow !== 'mood' && (
             <div className="ic-flow-step">
-              {workflow !== 'mood' && renderRoomLibrary()}
-              {workflow === 'mood' && renderProductLibrary('mood')}
+              {renderProductLibrary('place')}
             </div>
-            {workflow !== 'mood' && (
-              <div className="ic-flow-step">
-                {renderProductLibrary('place')}
-              </div>
-            )}
-            <div className="ic-flow-step">
-              {renderEditorControls()}
-            </div>
-            <div className="ic-flow-step">
-              {renderCanvas()}
-            </div>
-            <div className="ic-flow-step">
-              {renderGenerateControls()}
-            </div>
-          </motion.section>
-        </AnimatePresence>
+          )}
+          <div className="ic-flow-step">
+            {renderEditorControls()}
+          </div>
+          <div className="ic-flow-step">
+            {renderCanvas()}
+          </div>
+          <div className="ic-flow-step">
+            {renderGenerateControls()}
+          </div>
+        </section>
       </main>
 
       <MeasureOverlay isActive={isMeasureMode} imageUrl={sceneImageUrl} onClose={() => setIsMeasureMode(false)} />
