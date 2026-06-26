@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 
 const source = fs.readFileSync('src/data/productLibrary.ts', 'utf8');
 const productIds = [
-  ...source.matchAll(/\n\s*product\('([^']+)'/g),
+  ...source.matchAll(/\n\s*(?:product|realProduct)\(\s*'([^']+)'/g),
   ...source.matchAll(/\n\s*id:\s*'([^']+)'/g),
 ].map((match) => match[1]);
 const productCount = productIds.length;
@@ -35,6 +35,9 @@ print('\\n'.join(opaque))
   { encoding: 'utf8' }
 ).trim();
 const requiredProductIds = [
+  'lo-luna-nightstand',
+  'lo-willow-dresser',
+  'lo-marble-salt-pepper',
   'real-black-task-lamp',
 ];
 const removedInSituIds = [
@@ -71,7 +74,7 @@ const removedInSituIds = [
 const missingProductIds = requiredProductIds.filter((id) => !source.includes(`'${id}'`));
 const staleInSituIds = removedInSituIds.filter((id) => source.includes(`'${id}'`));
 
-assert.equal(productCount, 1, `Expected the cleaned real-photo product library, found ${productCount}.`);
+assert.equal(productCount, 4, `Expected the cleaned real-photo product library, found ${productCount}.`);
 assert.equal(missing.length, 0, `Missing product images:\n${missing.join('\n')}`);
 assert.equal(nonProductLibraryPaths.length, 0, `Product library must use rebuilt local product images only:\n${nonProductLibraryPaths.join('\n')}`);
 assert.equal(missingProductIds.length, 0, `Missing real-photo catalog products:\n${missingProductIds.join('\n')}`);

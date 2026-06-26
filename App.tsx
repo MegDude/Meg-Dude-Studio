@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Heart, Menu, Ruler, Sparkles, X } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { PRODUCT_LIBRARY, ProductLibraryItem } from './src/data/productLibrary';
 import { generateMoodboard, generateMultiCompositeImage, stageRoomImage } from './src/services/openaiService';
 import { Product } from './types';
@@ -72,6 +73,8 @@ type SavedProject = {
   stagePrompt: string;
   keepPrompt: string;
   removePrompt: string;
+  ambientLight?: number;
+  lightingTemperature?: number;
 };
 
 type GalleryItem = {
@@ -95,9 +98,20 @@ const SCENE_LIBRARY: SceneLibraryItem[] = [
 ];
 
 const workflowLabels: Record<Workflow, string> = {
-  design: 'Design Space',
-  stage: 'Stage Listing',
-  mood: 'Create Moodboard',
+  design: 'Design',
+  stage: 'Stage',
+  mood: 'Mood Studio',
+};
+
+const workflowTransition = {
+  initial: { opacity: 0, y: 14, filter: 'blur(8px)' },
+  animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
+  exit: { opacity: 0, y: -10, filter: 'blur(6px)' },
+};
+
+const workflowTransitionTiming = {
+  duration: 0.34,
+  ease: [0.22, 1, 0.36, 1] as const,
 };
 
 const fileToBase64 = (file: File): Promise<string> => (
@@ -202,6 +216,7 @@ const App: React.FC = () => {
   const [moodProducts, setMoodProducts] = useState<{ name: string; url: string }[]>([]);
   const [moodboardImageUrl, setMoodboardImageUrl] = useState<string | null>(null);
   const [ambientLight, setAmbientLight] = useState(100);
+  const [lightingTemperature, setLightingTemperature] = useState(0);
   const [history, setHistory] = useState<HistorySnapshot[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
@@ -230,6 +245,30 @@ const App: React.FC = () => {
   const generatedImageUrl = workflow === 'mood' ? moodboardImageUrl : sceneImageUrl;
   const hasGenerated = !!debugPrompt || !!moodboardImageUrl;
   const isAgentReady = agentStatus?.configured === true;
+  const lightingModeLabel = lightingTemperature > 8 ? 'warm' : lightingTemperature < -8 ? 'cool' : 'neutral';
+  const sceneLightFilter = useMemo(() => {
+    const temperature = Math.max(-40, Math.min(40, lightingTemperature));
+    const brightness = Math.max(70, Math.min(135, ambientLight));
+    const saturation = 100 + Math.abs(temperature) * 0.18;
+    const sepia = temperature > 0 ? temperature * 0.22 : 0;
+    const hue = temperature > 0 ? -temperature * 0.18 : Math.abs(temperature) * 0.22;
+    return `brightness(${brightness}%) saturate(${saturation}%) sepia(${sepia}%) hue-rotate(${hue}deg)`;
+  }, [ambientLight, lightingTemperature]);
+  const productLightFilter = useMemo(() => {
+    const temperature = Math.max(-40, Math.min(40, lightingTemperature));
+    const brightness = Math.max(70, Math.min(135, ambientLight));
+    const productBrightness = Math.max(78, Math.min(126, brightness + (100 - brightness) * 0.28));
+    const saturation = 100 + Math.abs(temperature) * 0.12;
+    const sepia = temperature > 0 ? temperature * 0.16 : 0;
+    const hue = temperature > 0 ? -temperature * 0.14 : Math.abs(temperature) * 0.18;
+    return `brightness(${productBrightness}%) saturate(${saturation}%) sepia(${sepia}%) hue-rotate(${hue}deg)`;
+  }, [ambientLight, lightingTemperature]);
+  const lightingInstruction = useMemo(() => (
+    `Lighting grade: ${lightingModeLabel} architectural light, ${ambientLight}% brightness, ${lightingTemperature > 0 ? `${lightingTemperature} warm` : lightingTemperature < 0 ? `${Math.abs(lightingTemperature)} cool` : 'neutral temperature'}. Match inserted product lighting to the room with physically plausible shadows, contact occlusion, color bounce, exposure, and no visible compositing edge.`
+  ), [ambientLight, lightingModeLabel, lightingTemperature]);
+  const litActiveProducts = useMemo(() => (
+    activeProducts.map((item) => ({ ...item, styleFilter: productLightFilter }))
+  ), [activeProducts, productLightFilter]);
   const filteredRooms = useMemo(() => (
     SCENE_LIBRARY.filter((room) => activeRoomCategory === 'All' || room.type === activeRoomCategory)
   ), [activeRoomCategory]);
@@ -409,6 +448,16 @@ const App: React.FC = () => {
     setStatus('Undo complete');
   }, [history]);
 
+  const matchProductLighting = useCallback(() => {
+    if (activeProducts.length === 0 && !selectedProductFile) {
+      setStatus('Add a product to match lighting.');
+      return;
+    }
+    setAmbientLight(104);
+    setLightingTemperature(10);
+    setStatus('Lighting matched to products.');
+  }, [activeProducts.length, selectedProductFile]);
+
   const saveProject = useCallback(async () => {
     try {
       const project: SavedProject = {
@@ -426,13 +475,15 @@ const App: React.FC = () => {
         stagePrompt,
         keepPrompt,
         removePrompt: stageRemovePrompt,
+        ambientLight,
+        lightingTemperature,
       };
       localStorage.setItem('interiorCreatorWorkspace', JSON.stringify(project));
       setStatus('Project saved locally');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Project could not be saved.');
     }
-  }, [designBrief, keepPrompt, moodProducts, moodPrompt, originalSceneBase64, placedObjects, sceneImage, selectedRoom, stagePrompt, stageRemovePrompt, workflow]);
+  }, [ambientLight, designBrief, keepPrompt, lightingTemperature, moodProducts, moodPrompt, originalSceneBase64, placedObjects, sceneImage, selectedRoom, stagePrompt, stageRemovePrompt, workflow]);
 
   const loadProject = useCallback(() => {
     try {
@@ -461,6 +512,8 @@ const App: React.FC = () => {
       setStagePrompt(project.stagePrompt || '');
       setKeepPrompt(project.keepPrompt || '');
       setStageRemovePrompt(project.removePrompt || '');
+      setAmbientLight(project.ambientLight || 100);
+      setLightingTemperature(project.lightingTemperature || 0);
       setStatus('Project loaded');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Project could not be loaded.');
@@ -497,6 +550,8 @@ const App: React.FC = () => {
     setMoodboardImageUrl(null);
     setDebugPrompt(null);
     setError(null);
+    setAmbientLight(100);
+    setLightingTemperature(0);
     setStatus('New project ready');
     setHistory([]);
   }, []);
@@ -536,7 +591,7 @@ const App: React.FC = () => {
           rotation: item.rotation,
         })),
         sceneImage,
-        designBrief || 'Refined room composition',
+        `${designBrief || 'Refined room composition'}\n${lightingInstruction}`,
       );
       const nextFile = await imageUrlToFile(finalImageUrl, `generated-${Date.now()}.jpg`);
       setSceneImage(nextFile);
@@ -549,7 +604,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [activeProducts, designBrief, pushHistory, sceneImage, selectedProduct, selectedProductFile]);
+  }, [activeProducts, designBrief, lightingInstruction, pushHistory, sceneImage, selectedProduct, selectedProductFile]);
 
   const generateRemoval = useCallback(async () => {
     if (!sceneImage || !removePrompt.trim()) return;
@@ -558,7 +613,7 @@ const App: React.FC = () => {
     setError(null);
     setStatus('Removing item');
     try {
-      const { finalImageUrl, finalPrompt } = await stageRoomImage(sceneImage, `Remove ${removePrompt}. Cleanly inpaint the removed area using the surrounding wall, floor, fabric, reflections, grain, and lighting. Do not leave any shadow, glow, pale patch, blurred rectangle, outline, duplicate texture, or visible edit mark. Preserve all other architecture, lighting, furniture, and camera perspective.`);
+      const { finalImageUrl, finalPrompt } = await stageRoomImage(sceneImage, `Remove ${removePrompt}. ${lightingInstruction} Cleanly inpaint the removed area using the surrounding wall, floor, fabric, reflections, grain, and lighting. Do not leave any shadow, glow, pale patch, blurred rectangle, outline, duplicate texture, or visible edit mark. Preserve all other architecture, lighting, furniture, and camera perspective.`);
       setSceneImage(await imageUrlToFile(finalImageUrl, `clean-room-${Date.now()}.jpg`));
       setPlacedObjects([]);
       setRemoveTargetPosition(null);
@@ -570,7 +625,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [pushHistory, removePrompt, sceneImage]);
+  }, [lightingInstruction, pushHistory, removePrompt, sceneImage]);
 
   const generateStage = useCallback(async () => {
     if (!sceneImage) return;
@@ -579,7 +634,7 @@ const App: React.FC = () => {
     setError(null);
     setStatus('Generating listing stage');
     try {
-      const direction = `${stagePrompt}\nKeep: ${keepPrompt || 'existing architecture and fixed finishes'}\nRemove: ${stageRemovePrompt || 'nothing unless visually necessary'}`;
+      const direction = `${stagePrompt}\n${lightingInstruction}\nKeep: ${keepPrompt || 'existing architecture and fixed finishes'}\nRemove: ${stageRemovePrompt || 'nothing unless visually necessary'}`;
       if (activeProducts.length > 0) {
         const { finalImageUrl, finalPrompt } = await generateMultiCompositeImage(
           activeProducts.map((item) => ({
@@ -607,7 +662,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [activeProducts, keepPrompt, pushHistory, sceneImage, stagePrompt, stageRemovePrompt]);
+  }, [activeProducts, keepPrompt, lightingInstruction, pushHistory, sceneImage, stagePrompt, stageRemovePrompt]);
 
   const generateMood = useCallback(async () => {
     if (moodProducts.length === 0 || !moodPrompt.trim()) return;
@@ -883,7 +938,7 @@ const App: React.FC = () => {
           if (file) setNewScene(file);
         }}
       />
-      <div className="ic-canvas-filter" style={{ filter: `brightness(${ambientLight}%)` }}>
+      <div className="ic-canvas-filter" style={{ filter: sceneLightFilter }}>
         <ImageUploader
           ref={sceneImgRef}
           id="room-scene-uploader"
@@ -904,7 +959,7 @@ const App: React.FC = () => {
           showPerspectiveGrid={editMode === 'add' && (!!selectedProduct || isTouchDragging || isTouchHovering)}
           isTouchHovering={isTouchHovering}
           touchOrbPosition={touchOrbPosition}
-          placedObjects={activeProducts}
+          placedObjects={litActiveProducts}
           className="ic-scene-frame"
         />
       </div>
@@ -989,11 +1044,22 @@ const App: React.FC = () => {
           <p className="ic-small-note">{moodProducts.length} selected</p>
         </>
       )}
-      <label className="ic-range-label">
-        <span>Light</span>
-        <strong>{ambientLight}%</strong>
-        <input type="range" min="70" max="135" value={ambientLight} onChange={(event) => setAmbientLight(Number(event.target.value))} />
-      </label>
+      <div className="ic-lighting-panel" aria-label="Scene lighting controls">
+        <div className="ic-lighting-panel-header">
+          <span>Lighting</span>
+          <button type="button" onClick={matchProductLighting}>Match products</button>
+        </div>
+        <label className="ic-range-label">
+          <span>Brightness</span>
+          <strong>{ambientLight}%</strong>
+          <input type="range" min="70" max="135" value={ambientLight} onChange={(event) => setAmbientLight(Number(event.target.value))} />
+        </label>
+        <label className="ic-range-label">
+          <span>Temperature</span>
+          <strong>{lightingTemperature > 0 ? `+${lightingTemperature} warm` : lightingTemperature < 0 ? `${lightingTemperature} cool` : '0 neutral'}</strong>
+          <input type="range" min="-40" max="40" value={lightingTemperature} onChange={(event) => setLightingTemperature(Number(event.target.value))} />
+        </label>
+      </div>
     </section>
   );
 
@@ -1094,26 +1160,36 @@ const App: React.FC = () => {
           })}
         </section>
 
-        <section className="ic-workflow-stack">
-          <div className="ic-flow-step">
-            {workflow !== 'mood' && renderRoomLibrary()}
-            {workflow === 'mood' && renderProductLibrary('mood')}
-          </div>
-          {workflow !== 'mood' && (
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.section
+            key={workflow}
+            className="ic-workflow-stack"
+            variants={workflowTransition}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={workflowTransitionTiming}
+          >
             <div className="ic-flow-step">
-              {renderProductLibrary('place')}
+              {workflow !== 'mood' && renderRoomLibrary()}
+              {workflow === 'mood' && renderProductLibrary('mood')}
             </div>
-          )}
-          <div className="ic-flow-step">
-            {renderEditorControls()}
-          </div>
-          <div className="ic-flow-step">
-            {renderCanvas()}
-          </div>
-          <div className="ic-flow-step">
-            {renderGenerateControls()}
-          </div>
-        </section>
+            {workflow !== 'mood' && (
+              <div className="ic-flow-step">
+                {renderProductLibrary('place')}
+              </div>
+            )}
+            <div className="ic-flow-step">
+              {renderEditorControls()}
+            </div>
+            <div className="ic-flow-step">
+              {renderCanvas()}
+            </div>
+            <div className="ic-flow-step">
+              {renderGenerateControls()}
+            </div>
+          </motion.section>
+        </AnimatePresence>
       </main>
 
       <MeasureOverlay isActive={isMeasureMode} imageUrl={sceneImageUrl} onClose={() => setIsMeasureMode(false)} />

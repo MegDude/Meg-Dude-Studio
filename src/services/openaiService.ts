@@ -368,15 +368,17 @@ export const stageRoomImage = async (
   const resizedEnvironmentImage = await resizeImage(environmentImage, MAX_DIMENSION);
 
   const prompt = `
-You are an expert interior designer and virtual staging image editor.
+You are a world-class architectural visualization director, interior designer, and virtual staging image editor.
 
 Use the provided room image as the source scene and stage it according to this instruction:
 "${stagingPrompt}"
 
 Requirements:
 - Retain the original room architecture, walls, floors, windows, and camera angle.
-- Add photorealistic furniture, rugs, plants, art, and decor that fit the requested style.
-- Match perspective, scale, lighting, color temperature, and shadows.
+- Add photorealistic furniture, rugs, plants, art, and decor that fit the requested style with restrained editorial taste.
+- Match perspective, scale, lighting, color temperature, reflections, and contact shadows with architectural visualization quality.
+- Keep every object physically plausible in size. Do not create oversized furniture, invisible cropped objects, stretched assets, warped rooms, or impossible perspective.
+- Finish like a leading global design studio: natural materials, quiet luxury, balanced negative space, believable exposure, no gimmicks.
 - For removal or cleanup requests, inpaint the removed area with matching surrounding texture, grain, material, lighting, and shadows.
 - Never leave ghosting, leftover shadows, light patches, blurred rectangles, halos, outlines, duplicate texture, or visible edit marks where an item was removed.
 - Return only the final staged room image. Do not add labels, text, borders, markers, or UI elements.
@@ -413,7 +415,7 @@ export const generateMultiCompositeImage = async (
   }).join('\n');
 
   const prompt = `
-You are an expert interior image editor. Seamlessly composite the supplied product images into the supplied room scene.
+You are a world-class architectural visualization compositor and interior design director. Seamlessly composite the supplied product images into the supplied room scene.
 
 Scene description:
 "${environmentDescription}"
@@ -425,7 +427,9 @@ Rules:
 - The first reference image is the room. All following images are products to add.
 - Place every product once near its requested coordinate.
 - Respect the room perspective, floor plane, wall plane, scale, depth, and camera angle.
-- Match shadows, reflections, color temperature, and contrast so the result looks like one untouched photograph.
+- Match shadows, reflections, color temperature, exposure, and contrast so the result looks like one untouched photograph.
+- Keep products visible, properly sized, and fully integrated. Do not enlarge items until they crop out of frame, dominate the architecture, or become unrecognizable.
+- Preserve architectural clarity, refined composition, believable material response, and global design-studio polish.
 - Never add labels, text, markers, outlines, bounding boxes, or UI overlays.
 - Return only the final generated room image.
 `;
