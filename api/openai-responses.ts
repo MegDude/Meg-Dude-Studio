@@ -38,7 +38,7 @@ export default async function handler(req: any, res: any) {
       ...requestBody,
       model,
       store: requestBody.store ?? false,
-      reasoning: requestBody.reasoning ?? { effort: 'minimal' },
+      reasoning: requestBody.reasoning ?? { effort: 'none' },
       text: requestBody.text ?? { verbosity: 'low' },
       max_output_tokens: Math.min(
         requestBody.max_output_tokens ?? (usesImageGeneration ? IMAGE_TOKEN_LIMIT : TEXT_TOKEN_LIMIT),

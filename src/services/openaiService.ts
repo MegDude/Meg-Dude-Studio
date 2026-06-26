@@ -197,7 +197,7 @@ const callOpenAIResponses = async (
       model: getOpenAIImageModel(),
       input: [{ role: 'user', content }],
       store: false,
-      reasoning: { effort: 'minimal' },
+      reasoning: { effort: 'none' },
       text: { verbosity: 'low' },
       max_output_tokens: useImageTool
         ? IMAGE_TOKEN_LIMIT
