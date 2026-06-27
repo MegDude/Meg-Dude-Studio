@@ -219,8 +219,8 @@ const callOpenAIResponses = async (
     }
     const error = new Error(
       code === AGENT_CONFIG_ERROR_CODE
-        ? 'OpenAI agent is not configured. Add OPENAI_API_KEY in Vercel, then redeploy.'
-        : `OpenAI request failed (${response.status}). ${message}`
+        ? 'The studio connection is almost ready. Try again in a moment.'
+        : `The image service paused before finishing. Try again in a moment.`
     );
     if (code) error.name = code;
     throw error;
@@ -242,7 +242,7 @@ const requestOpenAIImage = async (prompt: string, files: File[]): Promise<string
 
   if (!imageUrl) {
     const fallbackText = extractOutputText(payload);
-    throw new Error(fallbackText || 'OpenAI did not return a generated image.');
+    throw new Error(fallbackText || 'The studio could not finish the image. Try again in a moment.');
   }
 
   return imageUrl;
@@ -369,7 +369,7 @@ const withOpenAIImageFallback = async (
     if (error instanceof Error && error.name === AGENT_CONFIG_ERROR_CODE) {
       throw error;
     }
-    console.error('OpenAI generation failed:', error);
+    console.error('Image generation fell back to local preview:', error);
     return {
       finalImageUrl: await fallback(),
       finalPrompt: `${prompt}\n\nLocal preview used because ${fallbackReason}.`,
@@ -405,7 +405,7 @@ Requirements:
     prompt,
     [resizedEnvironmentImage],
     () => createLocalStagedPreview(environmentImage, prompt),
-    'the OpenAI image request failed'
+    'the image service paused before finishing'
   );
 
   try {
@@ -455,7 +455,7 @@ Rules:
     prompt,
     [resizedEnvironmentImage, ...placedObjects.map(obj => obj.image)],
     () => createLocalCompositePreview(placedObjects, environmentImage),
-    'the OpenAI composite request failed'
+    'the image service paused before finishing'
   );
 
   try {
@@ -512,7 +512,7 @@ Return only a JSON array containing 2 or 3 complementary product integer IDs. Ex
       return ids.filter(id => validIds.has(id)).slice(0, 3);
     }
   } catch (error) {
-    console.error('OpenAI product suggestions failed:', error);
+    console.error('Product suggestions were unavailable:', error);
   }
 
   return unplaced.slice(0, 3).map(item => item.id);
@@ -566,7 +566,7 @@ Requirements:
       ctx.fillRect(220, 200, 760, 440);
       return canvas.toDataURL('image/jpeg', 0.9);
     },
-    'the OpenAI moodboard request failed'
+    'the image service paused before finishing'
   );
 };
 
@@ -594,13 +594,13 @@ Requirements:
     prompt,
     [resizedProductImage],
     () => fileToDataUrl(productImage),
-    'the OpenAI product edit request failed'
+    'the image service paused before finishing'
   );
 
   try {
     result.finalImageUrl = await cropToOriginalAspectRatio(result.finalImageUrl, originalWidth, originalHeight, MAX_DIMENSION);
   } catch {
-    // Preserve the OpenAI result when it already fits the source ratio.
+    // Preserve the generated result when it already fits the source ratio.
   }
 
   return result;

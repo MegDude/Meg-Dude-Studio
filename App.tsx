@@ -391,7 +391,7 @@ const App: React.FC = () => {
         category: product.category,
       }, relativePosition, pixelPosition);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Product could not be loaded.');
+      setError(friendlyIssueMessage('That product could not be added. Try again in a moment.')(err));
     }
   }, [placeProduct]);
 
@@ -409,7 +409,7 @@ const App: React.FC = () => {
       const file = await fetchUrlToFile(product.url, `${product.name}.jpg`);
       placeProduct(file, { id: product.url, name: product.name, imageUrl: product.url }, relativePosition, pixelPosition);
     } catch (err) {
-      setError(err instanceof Error ? err.message : `Could not place ${product.name}.`);
+      setError(friendlyIssueMessage(`${product.name} could not be placed. Try again in a moment.`)(err));
     }
   }, [placeProduct]);
 
@@ -484,7 +484,7 @@ const App: React.FC = () => {
       localStorage.setItem('interiorCreatorWorkspace', JSON.stringify(project));
       setStatus('Project saved locally');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Project could not be saved.');
+      setError(friendlyIssueMessage('The project could not be saved. Try again in a moment.')(err));
     }
   }, [ambientLight, designBrief, keepPrompt, lightingTemperature, moodProducts, moodPrompt, originalSceneBase64, placedObjects, sceneImage, selectedRoom, stagePrompt, stageRemovePrompt, workflow]);
 
@@ -519,7 +519,7 @@ const App: React.FC = () => {
       setLightingTemperature(project.lightingTemperature || 0);
       setStatus('Project loaded');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Project could not be loaded.');
+      setError(friendlyIssueMessage('The saved project could not be opened. Try again in a moment.')(err));
     }
   }, []);
 
