@@ -948,14 +948,26 @@ img {
 
 .ic-library-filters {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 7px;
-  justify-content: flex-end;
-  justify-items: end;
+  justify-content: flex-start;
+  justify-items: start;
   min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ic-library-filters .ic-chip-row {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  min-width: max-content;
 }
 
 .ic-chip-row button {
+  flex: 0 0 auto;
   min-height: 22px;
   color: rgba(11, 31, 51, 0.52);
   font-size: 10.5px;
@@ -2103,6 +2115,24 @@ img {
 .ic-editor-tools,
 .ic-library-filters {
   justify-content: flex-start !important;
+}
+
+.ic-library-filters {
+  flex-wrap: nowrap !important;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ic-library-filters .ic-chip-row {
+  flex-wrap: nowrap !important;
+  min-width: max-content;
+}
+
+.ic-library-filters .ic-chip-row button {
+  flex: 0 0 auto;
 }
 
 .ic-section-heading,

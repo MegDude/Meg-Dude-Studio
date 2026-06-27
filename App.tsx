@@ -800,12 +800,14 @@ const App: React.FC = () => {
     <section className="ic-library-section ic-room-library-section" aria-label="Room library">
       <div className="ic-section-heading">
         <h3>Rooms</h3>
-        <div className="ic-chip-row">
-          {['All', ...Array.from(new Set(SCENE_LIBRARY.map((item) => item.type)))].map((type) => (
-            <button key={type} type="button" className={activeRoomCategory === type ? 'is-active' : ''} onClick={() => setActiveRoomCategory(type)}>
-              {type}
-            </button>
-          ))}
+        <div className="ic-library-filters">
+          <div className="ic-chip-row" aria-label="Room category">
+            {['All', ...Array.from(new Set(SCENE_LIBRARY.map((item) => item.type)))].map((type) => (
+              <button key={type} type="button" className={activeRoomCategory === type ? 'is-active' : ''} onClick={() => setActiveRoomCategory(type)}>
+                {type}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       <div className="ic-asset-grid ic-room-grid">
