@@ -102,6 +102,21 @@ const workflowLabels: Record<Workflow, string> = {
   mood: 'Mood Studio',
 };
 
+const friendlyIssueMessage = (fallback: string) => (error: unknown): string => {
+  const message = error instanceof Error ? error.message : '';
+  if (
+    error instanceof Error &&
+    (error.name === 'OPENAI_API_KEY_MISSING' ||
+      /openai|api|key|vercel|agent|token|configured|503|500|json/i.test(message))
+  ) {
+    return 'The studio connection is almost ready. Try again in a moment.';
+  }
+  if (/network|fetch|load|timeout|failed/i.test(message)) {
+    return 'The studio had trouble reaching the image service. Try again in a moment.';
+  }
+  return fallback;
+};
+
 const fileToBase64 = (file: File): Promise<string> => (
   new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -568,7 +583,7 @@ const App: React.FC = () => {
     pushHistory();
     setIsLoading(true);
     setError(null);
-    setStatus('Generating design');
+    setStatus('Creating design');
     try {
       const { finalImageUrl, finalPrompt } = await generateMultiCompositeImage(
         productsForGeneration.map((item) => ({
@@ -587,8 +602,8 @@ const App: React.FC = () => {
       setDebugPrompt(finalPrompt);
       setStatus('Design ready');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Generation failed.');
-      setStatus('Generation failed');
+      setError(friendlyIssueMessage('The design could not be finished. Try again in a moment.')(err));
+      setStatus('Design paused');
     } finally {
       setIsLoading(false);
     }
@@ -606,10 +621,10 @@ const App: React.FC = () => {
       setPlacedObjects([]);
       setRemoveTargetPosition(null);
       setDebugPrompt(finalPrompt);
-      setStatus('Clean room generated');
+      setStatus('Clean edit ready');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Removal failed.');
-      setStatus('Removal failed');
+      setError(friendlyIssueMessage('The clean edit could not be finished. Try again in a moment.')(err));
+      setStatus('Clean edit paused');
     } finally {
       setIsLoading(false);
     }
@@ -620,7 +635,7 @@ const App: React.FC = () => {
     pushHistory();
     setIsLoading(true);
     setError(null);
-    setStatus('Generating listing stage');
+    setStatus('Staging scene');
     try {
       const direction = `${stagePrompt}\n${lightingInstruction}\nKeep: ${keepPrompt || 'existing architecture and fixed finishes'}\nRemove: ${stageRemovePrompt || 'nothing unless visually necessary'}`;
       if (activeProducts.length > 0) {
@@ -643,10 +658,10 @@ const App: React.FC = () => {
         setSceneImage(await imageUrlToFile(finalImageUrl, `staged-${Date.now()}.jpg`));
         setDebugPrompt(finalPrompt);
       }
-      setStatus('Listing stage ready');
+      setStatus('Stage ready');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Staging failed.');
-      setStatus('Staging failed');
+      setError(friendlyIssueMessage('The staged scene could not be finished. Try again in a moment.')(err));
+      setStatus('Stage paused');
     } finally {
       setIsLoading(false);
     }
@@ -656,15 +671,15 @@ const App: React.FC = () => {
     if (moodProducts.length === 0 || !moodPrompt.trim()) return;
     setIsLoading(true);
     setError(null);
-    setStatus('Generating moodboard');
+    setStatus('Creating moodboard');
     try {
       const { finalImageUrl, finalPrompt } = await generateMoodboard(moodProducts, moodPrompt);
       setMoodboardImageUrl(finalImageUrl);
       setDebugPrompt(finalPrompt);
       setStatus('Moodboard ready');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Moodboard generation failed.');
-      setStatus('Moodboard failed');
+      setError(friendlyIssueMessage('The moodboard could not be finished. Try again in a moment.')(err));
+      setStatus('Moodboard paused');
     } finally {
       setIsLoading(false);
     }
@@ -688,10 +703,10 @@ const App: React.FC = () => {
       : isAgentReady && moodProducts.length > 0 && !!moodPrompt.trim();
 
   const readinessReason = useMemo(() => {
-    if (isLoading) return 'Generating...';
-    if (agentStatusError) return 'AI agent status could not be checked.';
-    if (agentStatus && !agentStatus.configured) return 'AI setup required.';
-    if (!agentStatus) return 'Checking AI agent...';
+    if (isLoading) return 'Creating...';
+    if (agentStatusError) return 'Studio connection is being checked.';
+    if (agentStatus && !agentStatus.configured) return 'Studio connection needed.';
+    if (!agentStatus) return 'Checking studio...';
     if (workflow === 'mood') {
       if (moodProducts.length === 0) return 'Select one product.';
       if (!moodPrompt.trim()) return 'Add direction.';
@@ -718,13 +733,13 @@ const App: React.FC = () => {
   const refreshAgentStatus = useCallback(async () => {
     try {
       const response = await fetch('/api/openai-responses');
-      if (!response.ok) throw new Error(`Agent status failed (${response.status}).`);
+      if (!response.ok) throw new Error(`Studio status failed (${response.status}).`);
       const nextStatus = await response.json();
       setAgentStatus(nextStatus);
       setAgentStatusError(null);
     } catch (err) {
       setAgentStatus(null);
-      setAgentStatusError(err instanceof Error ? err.message : 'Could not check AI agent status.');
+      setAgentStatusError(friendlyIssueMessage('Studio connection is being checked.')(err));
     }
   }, []);
 
@@ -734,11 +749,11 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const onError = (event: ErrorEvent) => {
-      setError(event.message || 'Unexpected app error.');
+      setError(friendlyIssueMessage('The studio paused for a moment. Refresh or try again.')(event.error || event.message));
       setIsLoading(false);
     };
     const onRejection = (event: PromiseRejectionEvent) => {
-      setError(event.reason instanceof Error ? event.reason.message : 'Unexpected async error.');
+      setError(friendlyIssueMessage('The studio paused for a moment. Refresh or try again.')(event.reason));
       setIsLoading(false);
       event.preventDefault();
     };
@@ -958,8 +973,8 @@ const App: React.FC = () => {
           <p>Choose an image or start with a blank canvas.</p>
           <div className="ic-action-strip">
             <button type="button" onClick={() => recoveryUploadRef.current?.click()}>Upload</button>
-            <button type="button" onClick={loadFallbackRoom}>Retry</button>
-            <button type="button" onClick={continueBlankProject}>Blank</button>
+            <button type="button" onClick={loadFallbackRoom}>Try again</button>
+            <button type="button" onClick={continueBlankProject}>Blank canvas</button>
           </div>
         </div>
       )}
@@ -968,8 +983,8 @@ const App: React.FC = () => {
           <p>{assetLoadWarning}</p>
           <div className="ic-action-strip">
             <button type="button" onClick={() => recoveryUploadRef.current?.click()}>Upload</button>
-            <button type="button" onClick={loadFallbackRoom}>Retry</button>
-            <button type="button" onClick={continueBlankProject}>Blank</button>
+            <button type="button" onClick={loadFallbackRoom}>Try again</button>
+            <button type="button" onClick={continueBlankProject}>Blank canvas</button>
           </div>
         </div>
       )}
@@ -1037,7 +1052,7 @@ const App: React.FC = () => {
       <div className="ic-lighting-panel" aria-label="Scene lighting controls">
         <div className="ic-lighting-panel-header">
           <span>Lighting</span>
-          <button type="button" onClick={matchProductLighting}>Match products</button>
+          <button type="button" onClick={matchProductLighting}>Match light</button>
         </div>
         <label className="ic-range-label">
           <span>Brightness</span>
@@ -1056,18 +1071,18 @@ const App: React.FC = () => {
   const renderGenerateControls = () => (
     <section className="ic-controls-panel">
       <div className="ic-section-heading">
-        <h3>Output</h3>
+        <h3>Export</h3>
         <p>{readinessReason}</p>
       </div>
       {(!isAgentReady || agentStatusError) && (
         <div className="ic-agent-status">
-          <span>{agentStatusError || 'AI setup required. Add OPENAI_API_KEY in Vercel.'}</span>
-          <button type="button" onClick={refreshAgentStatus}>Retry</button>
+          <span>{agentStatusError || 'Studio connection needed before generating.'}</span>
+          <button type="button" onClick={refreshAgentStatus}>Try again</button>
         </div>
       )}
       <div className="ic-action-strip">
         <button type="button" onClick={primaryGenerate} disabled={!canGenerate || isLoading}>
-          <Sparkles size={15} /> Generate
+          <Sparkles size={15} /> Create
         </button>
         <button type="button" onClick={saveProject}>Save</button>
         <button type="button" onClick={loadProject}>Load</button>
@@ -1075,14 +1090,14 @@ const App: React.FC = () => {
       </div>
       {hasGenerated && sceneImageUrl && workflow !== 'mood' && (
         <div className="ic-action-strip">
-          <a href={sceneImageUrl} download="interior-creator-scene.jpg">Download</a>
+          <a href={sceneImageUrl} download="interior-creator-scene.jpg">Save image</a>
           <button type="button" onClick={() => setIsCompareOpen(true)} disabled={!originalSceneUrl}>Compare</button>
         </div>
       )}
       {workflow === 'mood' && moodboardImageUrl && (
         <div className="ic-output-preview">
           <img src={moodboardImageUrl} alt="Generated moodboard" />
-          <a href={moodboardImageUrl} download="interior-creator-moodboard.jpg">Download</a>
+          <a href={moodboardImageUrl} download="interior-creator-moodboard.jpg">Save image</a>
         </div>
       )}
     </section>
@@ -1132,7 +1147,7 @@ const App: React.FC = () => {
             workflow === 'mood' ? 'References' : 'Room',
             workflow === 'mood' ? 'Direction' : 'Products',
             'Arrange',
-            'Generate',
+            'Create',
           ].map((step, index) => {
             const complete = index === 0
               ? (workflow === 'mood' ? moodProducts.length > 0 : !!sceneImage)

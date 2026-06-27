@@ -2093,6 +2093,64 @@ img {
   }
 }
 
+/* Apple-grade final polish */
+.ic-app-v2 {
+  background:
+    linear-gradient(180deg, rgba(250, 250, 248, 0.92) 0%, #fff 18%, #fff 100%);
+}
+
+.ic-global-header {
+  box-shadow: 0 1px 0 rgba(11, 31, 51, 0.035);
+}
+
+.ic-controls-panel,
+.ic-library-section,
+.ic-canvas-card {
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(18px);
+}
+
+.ic-workflow-switcher {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(18px);
+}
+
+.ic-workflow-switcher button.is-active {
+  background: rgba(11, 31, 51, 0.92);
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(11, 31, 51, 0.12);
+}
+
+.ic-agent-status,
+.ic-error-line,
+.ic-loading-line {
+  border-color: rgba(200, 169, 106, 0.18);
+  background: rgba(255, 252, 244, 0.58);
+}
+
+.ic-error-line {
+  color: rgba(11, 31, 51, 0.74);
+}
+
+.ic-action-strip button:first-child:not(:disabled) {
+  background: rgba(11, 31, 51, 0.92);
+  border-color: rgba(11, 31, 51, 0.92);
+  color: #fff;
+  box-shadow: 0 14px 34px rgba(11, 31, 51, 0.14);
+}
+
+.ic-action-strip button:first-child:not(:disabled):hover,
+.ic-action-strip button:first-child:not(:disabled):focus-visible {
+  background: rgba(11, 31, 51, 0.86);
+  color: #fff;
+}
+
+.ic-output-preview img,
+.ic-gallery-grid img,
+.ic-before-after-slider {
+  box-shadow: 0 16px 42px rgba(11, 31, 51, 0.06);
+}
+
 /* Final rail alignment lock: all workspace rails start from the same left edge. */
 .ic-hero-compact {
   margin-inline: 0 auto;
