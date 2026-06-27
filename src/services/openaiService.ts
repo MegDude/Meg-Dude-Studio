@@ -62,7 +62,7 @@ const getImageDimensions = (file: File): Promise<{ width: number; height: number
   });
 };
 
-const resizeImage = (file: File, targetDimension: number): Promise<File> => {
+const resizeImage = (file: File, maxDimension: number): Promise<File> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
@@ -75,9 +75,12 @@ const resizeImage = (file: File, targetDimension: number): Promise<File> => {
       const img = new Image();
       img.src = event.target.result as string;
       img.onload = () => {
+        const scale = Math.min(1, maxDimension / Math.max(img.width, img.height));
+        const targetWidth = Math.max(1, Math.round(img.width * scale));
+        const targetHeight = Math.max(1, Math.round(img.height * scale));
         const canvas = document.createElement('canvas');
-        canvas.width = targetDimension;
-        canvas.height = targetDimension;
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
@@ -85,16 +88,7 @@ const resizeImage = (file: File, targetDimension: number): Promise<File> => {
           return;
         }
 
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, targetDimension, targetDimension);
-
-        const aspectRatio = img.width / img.height;
-        const drawWidth = aspectRatio > 1 ? targetDimension : targetDimension * aspectRatio;
-        const drawHeight = aspectRatio > 1 ? targetDimension / aspectRatio : targetDimension;
-        const x = (targetDimension - drawWidth) / 2;
-        const y = (targetDimension - drawHeight) / 2;
-
-        ctx.drawImage(img, x, y, drawWidth, drawHeight);
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
         canvas.toBlob((blob) => {
           if (!blob) {
             reject(new Error('Image resize failed.'));
@@ -112,22 +106,22 @@ const resizeImage = (file: File, targetDimension: number): Promise<File> => {
 const cropToOriginalAspectRatio = (
   imageDataUrl: string,
   originalWidth: number,
-  originalHeight: number,
-  targetDimension: number
+  originalHeight: number
 ): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.src = imageDataUrl;
     img.onload = () => {
-      const aspectRatio = originalWidth / originalHeight;
-      const contentWidth = aspectRatio > 1 ? targetDimension : targetDimension * aspectRatio;
-      const contentHeight = aspectRatio > 1 ? targetDimension / aspectRatio : targetDimension;
-      const x = (targetDimension - contentWidth) / 2;
-      const y = (targetDimension - contentHeight) / 2;
+      const targetAspect = originalWidth / originalHeight;
+      const imageAspect = img.naturalWidth / img.naturalHeight;
+      const sourceWidth = imageAspect > targetAspect ? img.naturalHeight * targetAspect : img.naturalWidth;
+      const sourceHeight = imageAspect > targetAspect ? img.naturalHeight : img.naturalWidth / targetAspect;
+      const sourceX = (img.naturalWidth - sourceWidth) / 2;
+      const sourceY = (img.naturalHeight - sourceHeight) / 2;
 
       const canvas = document.createElement('canvas');
-      canvas.width = contentWidth;
-      canvas.height = contentHeight;
+      canvas.width = Math.round(sourceWidth);
+      canvas.height = Math.round(sourceHeight);
 
       const ctx = canvas.getContext('2d');
       if (!ctx) {
@@ -135,7 +129,7 @@ const cropToOriginalAspectRatio = (
         return;
       }
 
-      ctx.drawImage(img, x, y, contentWidth, contentHeight, 0, 0, contentWidth, contentHeight);
+      ctx.drawImage(img, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, canvas.width, canvas.height);
       resolve(canvas.toDataURL('image/jpeg', 0.95));
     };
     img.onerror = () => reject(new Error('Generated image could not be loaded for cropping.'));
@@ -379,16 +373,22 @@ const withOpenAIImageFallback = async (
 
 export const stageRoomImage = async (
   environmentImage: File,
-  stagingPrompt: string
+  stagingPrompt: string,
+  referenceProducts: File[] = []
 ): Promise<{ finalImageUrl: string; finalPrompt: string }> => {
   const { width: originalWidth, height: originalHeight } = await getImageDimensions(environmentImage);
   const resizedEnvironmentImage = await resizeImage(environmentImage, MAX_DIMENSION);
+  const resizedReferences = await Promise.all(referenceProducts.slice(0, 6).map((file) => resizeImage(file, MAX_DIMENSION)));
 
   const prompt = `
 You are a world-class architectural visualization director, interior designer, and virtual staging image editor.
 
 Use the provided room image as the source scene and stage it according to this instruction:
 "${stagingPrompt}"
+
+Image order:
+- Image 1 is always the room to stage.
+- Additional images, if supplied, are product or material references. Use them as taste, scale, palette, and styling references for the full-room staging. Do not paste them as oversized floating objects.
 
 Requirements:
 - Retain the original room architecture, walls, floors, windows, and camera angle.
@@ -403,13 +403,13 @@ Requirements:
 
   const result = await withOpenAIImageFallback(
     prompt,
-    [resizedEnvironmentImage],
+    [resizedEnvironmentImage, ...resizedReferences],
     () => createLocalStagedPreview(environmentImage, prompt),
     'the image service paused before finishing'
   );
 
   try {
-    result.finalImageUrl = await cropToOriginalAspectRatio(result.finalImageUrl, originalWidth, originalHeight, MAX_DIMENSION);
+    result.finalImageUrl = await cropToOriginalAspectRatio(result.finalImageUrl, originalWidth, originalHeight);
   } catch {
     // OpenAI may already return the requested aspect ratio; keep the image if cropping is not applicable.
   }
@@ -459,7 +459,7 @@ Rules:
   );
 
   try {
-    result.finalImageUrl = await cropToOriginalAspectRatio(result.finalImageUrl, originalWidth, originalHeight, MAX_DIMENSION);
+    result.finalImageUrl = await cropToOriginalAspectRatio(result.finalImageUrl, originalWidth, originalHeight);
   } catch {
     // Keep the returned image if it is not the padded square format.
   }

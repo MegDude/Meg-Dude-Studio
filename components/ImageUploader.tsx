@@ -49,6 +49,32 @@ const WarningIcon: React.FC = () => (
  </svg>
 );
 
+const getRenderedImageRect = (img: HTMLImageElement, container: HTMLDivElement) => {
+ const containerRect = container.getBoundingClientRect();
+ const { naturalWidth, naturalHeight } = img;
+ const { width: containerWidth, height: containerHeight } = containerRect;
+ const imageAspectRatio = naturalWidth / naturalHeight;
+ const containerAspectRatio = containerWidth / containerHeight;
+
+ let renderedWidth: number;
+ let renderedHeight: number;
+ if (imageAspectRatio > containerAspectRatio) {
+ renderedWidth = containerWidth;
+ renderedHeight = containerWidth / imageAspectRatio;
+ } else {
+ renderedHeight = containerHeight;
+ renderedWidth = containerHeight * imageAspectRatio;
+ }
+
+ return {
+ containerRect,
+ renderedWidth,
+ renderedHeight,
+ offsetX: (containerWidth - renderedWidth) / 2,
+ offsetY: (containerHeight - renderedHeight) / 2,
+ };
+};
+
 
 const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, label, onFileSelect, imageUrl, className = "", isDropZone = false, onProductDrop, onLibraryProductDrop, onScenePointSelect, persistedOrbPosition, isTouchHovering = false, touchOrbPosition = null, placedObjects = [], onObjectMove, onObjectDelete, onObjectRotate, showPerspectiveGrid = false }, ref) => {
  const inputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +82,7 @@ const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, la
  const [isDraggingOver, setIsDraggingOver] = useState(false);
  const [orbPosition, setOrbPosition] = useState<{x: number, y: number} | null>(null);
  const [fileTypeError, setFileTypeError] = useState<string | null>(null);
+ const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
  
 
  // Expose the internal imgRef to the parent component via the forwarded ref
@@ -64,6 +91,7 @@ const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, la
  useEffect(() => {
  if (!imageUrl) {
  setFileTypeError(null);
+ setImageAspectRatio(null);
  }
  }, [imageUrl]);
 
@@ -85,25 +113,7 @@ const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, la
  const img = imgRef.current;
  if (!img) return null;
 
- const containerRect = currentTarget.getBoundingClientRect();
- const { naturalWidth, naturalHeight } = img;
- const { width: containerWidth, height: containerHeight } = containerRect;
-
- // Calculate the rendered image's dimensions inside the container (due to object-contain)
- const imageAspectRatio = naturalWidth / naturalHeight;
- const containerAspectRatio = containerWidth / containerHeight;
-
- let renderedWidth, renderedHeight;
- if (imageAspectRatio > containerAspectRatio) {
- renderedWidth = containerWidth;
- renderedHeight = containerWidth / imageAspectRatio;
- } else {
- renderedHeight = containerHeight;
- renderedWidth = containerHeight * imageAspectRatio;
- }
- 
- const offsetX = (containerWidth - renderedWidth) / 2;
- const offsetY = (containerHeight - renderedHeight) / 2;
+ const { containerRect, renderedWidth, renderedHeight, offsetX, offsetY } = getRenderedImageRect(img, currentTarget);
 
  const pointX = clientX - containerRect.left;
  const pointY = clientY - containerRect.top;
@@ -136,24 +146,7 @@ const ImageUploader = forwardRef<HTMLImageElement, ImageUploaderProps>(({ id, la
  const img = imgRef.current;
  if (!img || !onObjectMove) return;
 
- const containerRect = currentTarget.getBoundingClientRect();
- const { naturalWidth, naturalHeight } = img;
- const { width: containerWidth, height: containerHeight } = containerRect;
-
- const imageAspectRatio = naturalWidth / naturalHeight;
- const containerAspectRatio = containerWidth / containerHeight;
-
- let renderedWidth, renderedHeight;
- if (imageAspectRatio > containerAspectRatio) {
- renderedWidth = containerWidth;
- renderedHeight = containerWidth / imageAspectRatio;
- } else {
- renderedHeight = containerHeight;
- renderedWidth = containerHeight * imageAspectRatio;
- }
- 
- const offsetX = (containerWidth - renderedWidth) / 2;
- const offsetY = (containerHeight - renderedHeight) / 2;
+ const { containerRect, renderedWidth, renderedHeight, offsetX, offsetY } = getRenderedImageRect(img, currentTarget);
 
  const pointX = clientX - containerRect.left;
  const pointY = clientY - containerRect.top;
@@ -297,15 +290,17 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  ? 'border-white/50 border-dashed hover:border-white/80 cursor-pointer'
  : 'border-white/50 border-dashed cursor-default';
 
- const uploaderClasses = `dp-panel ic-uploader-shell w-full aspect-square md:aspect-video relative overflow-hidden flex flex-col items-center justify-center transition-all duration-300 ${className} ${
+ const uploaderClasses = `dp-panel ic-uploader-shell w-full relative overflow-hidden flex flex-col items-center justify-center transition-all duration-300 ${className} ${
  interactionClasses
  }`;
+ const shellStyle = imageAspectRatio ? { aspectRatio: `${imageAspectRatio}` } : undefined;
 
  return (
  <div className="flex flex-col items-center w-full">
  {label && <h3 className="dp-editorial-headline font-medium mb-4 text-2xl dp-muted dp-editorial-headline">{label}</h3>}
  <div
  className={uploaderClasses}
+ style={shellStyle}
  onClick={isActionable ? handleClick : undefined}
  onDragOver={handleDragOver}
  onDragLeave={handleDragLeave}
@@ -328,6 +323,10 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  src={imageUrl} 
  alt={label || fallbackAlt} 
  className="w-full h-full object-contain" 
+ onLoad={(event) => {
+ const { naturalWidth, naturalHeight } = event.currentTarget;
+ if (naturalWidth && naturalHeight) setImageAspectRatio(naturalWidth / naturalHeight);
+ }}
  />
  {isDropZone && (showPerspectiveGrid || isDraggingOver || isTouchHovering) && (
  <PerspectiveGuideOverlay isVisible={true} />
@@ -355,9 +354,14 @@ const [touchDragObj, setTouchDragObj] = useState<{id: string, x: number, y: numb
  )}
  {placedObjects.map((obj, index) => {
  if (obj.isVisible === false) return null;
- const containerRect = imgRef.current?.parentElement?.getBoundingClientRect();
- const derivedX = containerRect && obj.pixelPosition.x === 0 && obj.pixelPosition.y === 0 ? (obj.relativePosition.xPercent / 100) * containerRect.width : obj.pixelPosition.x;
- const derivedY = containerRect && obj.pixelPosition.x === 0 && obj.pixelPosition.y === 0 ? (obj.relativePosition.yPercent / 100) * containerRect.height : obj.pixelPosition.y;
+ const container = imgRef.current?.parentElement as HTMLDivElement | null;
+ const imageRect = imgRef.current && container ? getRenderedImageRect(imgRef.current, container) : null;
+ const derivedX = imageRect && obj.pixelPosition.x === 0 && obj.pixelPosition.y === 0
+ ? imageRect.offsetX + (obj.relativePosition.xPercent / 100) * imageRect.renderedWidth
+ : obj.pixelPosition.x;
+ const derivedY = imageRect && obj.pixelPosition.x === 0 && obj.pixelPosition.y === 0
+ ? imageRect.offsetY + (obj.relativePosition.yPercent / 100) * imageRect.renderedHeight
+ : obj.pixelPosition.y;
  return (
  <div 
  key={obj.id} 

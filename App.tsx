@@ -66,6 +66,7 @@ type SavedProject = {
   sceneBase64: string | null;
   originalBase64: string | null;
   placedObjects: Array<Omit<PlacedObject, 'image'> & { imageBase64: string }>;
+  stageProducts?: { name: string; url: string }[];
   moodProducts: { name: string; url: string }[];
   designBrief: string;
   moodPrompt: string;
@@ -102,6 +103,12 @@ const workflowLabels: Record<Workflow, string> = {
   mood: 'Mood Studio',
 };
 
+const workflowDescriptions: Record<Workflow, string> = {
+  design: 'Exact products',
+  stage: 'Full room',
+  mood: 'Direction board',
+};
+
 const friendlyIssueMessage = (fallback: string) => (error: unknown): string => {
   const message = error instanceof Error ? error.message : '';
   if (
@@ -135,11 +142,22 @@ const dataUrlToFile = (dataUrl: string, filename: string): File => {
   return new File([bytes], filename, { type: mime });
 };
 
+const assetFileCache = new Map<string, Promise<File>>();
+
 const fetchUrlToFile = async (url: string, filename: string): Promise<File> => {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Could not load ${filename}.`);
-  const blob = await response.blob();
-  return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+  const cacheKey = `${url}::${filename}`;
+  if (!assetFileCache.has(cacheKey)) {
+    assetFileCache.set(cacheKey, (async () => {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Could not load ${filename}.`);
+      const blob = await response.blob();
+      return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+    })().catch((error) => {
+      assetFileCache.delete(cacheKey);
+      throw error;
+    }));
+  }
+  return assetFileCache.get(cacheKey)!;
 };
 
 const imageUrlToFile = async (imageUrl: string, filename: string): Promise<File> => {
@@ -215,6 +233,7 @@ const App: React.FC = () => {
   const [designBrief, setDesignBrief] = useState('Create a refined room composition with the selected pieces.');
   const [keepPrompt, setKeepPrompt] = useState('');
   const [stageRemovePrompt, setStageRemovePrompt] = useState('');
+  const [stageProducts, setStageProducts] = useState<{ name: string; url: string }[]>([]);
   const [moodPrompt, setMoodPrompt] = useState('Warm minimal moodboard with linen, stone, wood, and quiet brass accents.');
   const [moodProducts, setMoodProducts] = useState<{ name: string; url: string }[]>([]);
   const [moodboardImageUrl, setMoodboardImageUrl] = useState<string | null>(null);
@@ -293,6 +312,7 @@ const App: React.FC = () => {
     setPlacedObjects([]);
     setSelectedProduct(null);
     setSelectedProductFile(null);
+    setStageProducts([]);
     setMoodboardImageUrl(null);
     setDebugPrompt(null);
     setOriginalSceneBase64(await fileToBase64(file));
@@ -472,6 +492,7 @@ const App: React.FC = () => {
           ...item,
           imageBase64: await fileToBase64(item.image),
         }))),
+        stageProducts,
         moodProducts,
         designBrief,
         moodPrompt,
@@ -486,7 +507,7 @@ const App: React.FC = () => {
     } catch (err) {
       setError(friendlyIssueMessage('The project could not be saved. Try again in a moment.')(err));
     }
-  }, [ambientLight, designBrief, keepPrompt, lightingTemperature, moodProducts, moodPrompt, originalSceneBase64, placedObjects, sceneImage, selectedRoom, stagePrompt, stageRemovePrompt, workflow]);
+  }, [ambientLight, designBrief, keepPrompt, lightingTemperature, moodProducts, moodPrompt, originalSceneBase64, placedObjects, sceneImage, selectedRoom, stageProducts, stagePrompt, stageRemovePrompt, workflow]);
 
   const loadProject = useCallback(() => {
     try {
@@ -509,6 +530,7 @@ const App: React.FC = () => {
         ...item,
         image: dataUrlToFile(item.imageBase64, `${item.id}.jpg`),
       })));
+      setStageProducts(project.stageProducts || []);
       setMoodProducts(project.moodProducts || []);
       setDesignBrief(project.designBrief || 'Create a refined room composition with the selected pieces.');
       setMoodPrompt(project.moodPrompt || '');
@@ -549,6 +571,7 @@ const App: React.FC = () => {
     setPlacedObjects([]);
     setSelectedProduct(null);
     setSelectedProductFile(null);
+    setStageProducts([]);
     setMoodProducts([]);
     setMoodboardImageUrl(null);
     setDebugPrompt(null);
@@ -637,27 +660,12 @@ const App: React.FC = () => {
     setError(null);
     setStatus('Staging scene');
     try {
+      const referenceFiles = await Promise.all(stageProducts.map((product) => fetchUrlToFile(product.url, `${product.name}.jpg`)));
       const direction = `${stagePrompt}\n${lightingInstruction}\nKeep: ${keepPrompt || 'existing architecture and fixed finishes'}\nRemove: ${stageRemovePrompt || 'nothing unless visually necessary'}`;
-      if (activeProducts.length > 0) {
-        const { finalImageUrl, finalPrompt } = await generateMultiCompositeImage(
-          activeProducts.map((item) => ({
-            image: item.image,
-            description: `${item.description}. ${direction}`,
-            relativePosition: item.relativePosition,
-            scale: item.scale,
-            rotation: item.rotation,
-          })),
-          sceneImage,
-          direction,
-        );
-        setSceneImage(await imageUrlToFile(finalImageUrl, `staged-${Date.now()}.jpg`));
-        setPlacedObjects([]);
-        setDebugPrompt(finalPrompt);
-      } else {
-        const { finalImageUrl, finalPrompt } = await stageRoomImage(sceneImage, direction);
-        setSceneImage(await imageUrlToFile(finalImageUrl, `staged-${Date.now()}.jpg`));
-        setDebugPrompt(finalPrompt);
-      }
+      const { finalImageUrl, finalPrompt } = await stageRoomImage(sceneImage, direction, referenceFiles);
+      setSceneImage(await imageUrlToFile(finalImageUrl, `staged-${Date.now()}.jpg`));
+      setPlacedObjects([]);
+      setDebugPrompt(finalPrompt);
       setStatus('Stage ready');
     } catch (err) {
       setError(friendlyIssueMessage('The staged scene could not be finished. Try again in a moment.')(err));
@@ -665,7 +673,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [activeProducts, keepPrompt, lightingInstruction, pushHistory, sceneImage, stagePrompt, stageRemovePrompt]);
+  }, [keepPrompt, lightingInstruction, pushHistory, sceneImage, stageProducts, stagePrompt, stageRemovePrompt]);
 
   const generateMood = useCallback(async () => {
     if (moodProducts.length === 0 || !moodPrompt.trim()) return;
@@ -699,7 +707,7 @@ const App: React.FC = () => {
       designBrief,
     })
     : workflow === 'stage'
-      ? isAgentReady && !!sceneImage && !!selectedRoom && (!!stagePrompt.trim() || activeProducts.length > 0)
+      ? isAgentReady && !!sceneImage && !!selectedRoom && (!!stagePrompt.trim() || stageProducts.length > 0)
       : isAgentReady && moodProducts.length > 0 && !!moodPrompt.trim();
 
   const readinessReason = useMemo(() => {
@@ -713,12 +721,12 @@ const App: React.FC = () => {
       return 'Ready.';
     }
     if (!sceneImage || !selectedRoom) return 'Choose a room.';
-    if (workflow === 'stage') return stagePrompt.trim() || activeProducts.length > 0 ? 'Ready.' : 'Add staging direction.';
+    if (workflow === 'stage') return stagePrompt.trim() || stageProducts.length > 0 ? 'Ready.' : 'Add staging direction.';
     if (editMode === 'remove') return removePrompt.trim() ? 'Ready.' : 'Tap or describe item.';
     if (activeProducts.length === 0 && !selectedProductFile) return 'Add a product.';
     if (!designBrief.trim()) return 'Add brief.';
     return 'Ready.';
-  }, [activeProducts.length, agentStatus, agentStatusError, designBrief, editMode, isLoading, moodProducts.length, moodPrompt, removePrompt, sceneImage, selectedProductFile, selectedRoom, stagePrompt, workflow]);
+  }, [activeProducts.length, agentStatus, agentStatusError, designBrief, editMode, isLoading, moodProducts.length, moodPrompt, removePrompt, sceneImage, selectedProductFile, selectedRoom, stageProducts.length, stagePrompt, workflow]);
 
   useEffect(() => {
     try {
@@ -848,10 +856,10 @@ const App: React.FC = () => {
     </section>
   );
 
-  const renderProductLibrary = (mode: 'place' | 'mood' = 'place') => (
+  const renderProductLibrary = (mode: 'place' | 'stage' | 'mood' = 'place') => (
     <section className="ic-library-section ic-product-library-section" aria-label="Product library">
       <div className="ic-section-heading">
-        <h3>{mode === 'mood' ? 'References' : 'Products'} <span className="ic-count">({filteredProducts.length})</span></h3>
+        <h3>{mode === 'place' ? 'Products' : 'References'} <span className="ic-count">({filteredProducts.length})</span></h3>
         <div className="ic-library-filters">
           <div className="ic-chip-row" aria-label="Product category">
             {['All', ...Array.from(new Set(PRODUCT_LIBRARY.map((item) => item.category)))].map((category) => (
@@ -876,6 +884,12 @@ const App: React.FC = () => {
                 setStatus('Uploaded product added to moodboard');
                 return;
               }
+              if (mode === 'stage') {
+                const url = URL.createObjectURL(file);
+                setStageProducts((previous) => [...previous, { name: file.name, url }]);
+                setStatus('Reference added to staging');
+                return;
+              }
               handleUploadedProduct(file);
             }}
           />
@@ -884,12 +898,13 @@ const App: React.FC = () => {
         </label>
         {filteredProducts.map((product) => {
           const isMoodSelected = moodProducts.some((item) => item.url === product.thumbnailUrl);
+          const isStageSelected = stageProducts.some((item) => item.url === product.thumbnailUrl);
           return (
             <button
               key={product.id}
               type="button"
               draggable={mode === 'place'}
-              className={`ic-asset-tile ${isMoodSelected ? 'is-active' : ''}`}
+              className={`ic-asset-tile ${isMoodSelected || isStageSelected ? 'is-active' : ''}`}
               onDragStart={(event) => {
                 if (mode !== 'place') return;
                 event.dataTransfer.effectAllowed = 'copy';
@@ -898,6 +913,14 @@ const App: React.FC = () => {
               onClick={() => {
                 if (mode === 'mood') {
                   setMoodProducts((previous) => (
+                    previous.some((item) => item.url === product.thumbnailUrl)
+                      ? previous.filter((item) => item.url !== product.thumbnailUrl)
+                      : [...previous, { name: product.name, url: product.thumbnailUrl }]
+                  ));
+                  return;
+                }
+                if (mode === 'stage') {
+                  setStageProducts((previous) => (
                     previous.some((item) => item.url === product.thumbnailUrl)
                       ? previous.filter((item) => item.url !== product.thumbnailUrl)
                       : [...previous, { name: product.name, url: product.thumbnailUrl }]
@@ -949,19 +972,19 @@ const App: React.FC = () => {
           id="room-scene-uploader"
           imageUrl={sceneImageUrl}
           onFileSelect={setNewScene}
-          isDropZone={!!sceneImage && !isLoading}
-          onProductDrop={editMode === 'remove' ? undefined : handleCanvasDrop}
+          isDropZone={workflow === 'design' && !!sceneImage && !isLoading}
+          onProductDrop={workflow === 'design' && editMode === 'add' ? handleCanvasDrop : undefined}
           onObjectMove={handleObjectMove}
           onObjectDelete={handleObjectDelete}
           onObjectRotate={handleObjectRotate}
           onLibraryProductDrop={handleLibraryProductDrop}
-          persistedOrbPosition={editMode === 'remove' ? removeTargetPosition : null}
-          onScenePointSelect={editMode === 'remove' ? (position, relative) => {
+          persistedOrbPosition={workflow === 'design' && editMode === 'remove' ? removeTargetPosition : null}
+          onScenePointSelect={workflow === 'design' && editMode === 'remove' ? (position, relative) => {
             setRemoveTargetPosition(position);
             setRemovePrompt(`item around ${Math.round(relative.xPercent)}% from the left and ${Math.round(relative.yPercent)}% from the top`);
             setStatus('Target selected. Generate to clean the scene.');
           } : undefined}
-          showPerspectiveGrid={editMode === 'add' && (!!selectedProduct || isTouchDragging || isTouchHovering)}
+          showPerspectiveGrid={workflow === 'design' && editMode === 'add' && (!!selectedProduct || isTouchDragging || isTouchHovering)}
           isTouchHovering={isTouchHovering}
           touchOrbPosition={touchOrbPosition}
           placedObjects={litActiveProducts}
@@ -1009,7 +1032,7 @@ const App: React.FC = () => {
         <h3>{workflow === 'mood' ? 'Direction' : 'Edit'}</h3>
         <p>{status}</p>
       </div>
-      {workflow !== 'mood' && (
+      {workflow === 'design' && (
         <div className="ic-editor-tools" aria-label="Editor tools">
           <button type="button" onClick={() => setIsMeasureMode(true)} disabled={!sceneImage}>
             <Ruler size={15} /> Measure
@@ -1041,6 +1064,7 @@ const App: React.FC = () => {
           <textarea value={stagePrompt} onChange={(event) => setStagePrompt(event.target.value)} placeholder="Staging direction" />
           <input value={keepPrompt} onChange={(event) => setKeepPrompt(event.target.value)} placeholder="Keep" />
           <input value={stageRemovePrompt} onChange={(event) => setStageRemovePrompt(event.target.value)} placeholder="Remove" />
+          <p className="ic-small-note">{stageProducts.length} references selected</p>
         </>
       )}
       {workflow === 'mood' && (
@@ -1136,8 +1160,9 @@ const App: React.FC = () => {
 
         <nav className="ic-workflow-switcher" aria-label="Workspace workflow">
           {(['design', 'stage', 'mood'] as Workflow[]).map((item) => (
-            <button key={item} type="button" className={workflow === item ? 'is-active' : ''} onClick={() => setWorkflow(item)}>
-              {workflowLabels[item]}
+          <button key={item} type="button" className={workflow === item ? 'is-active' : ''} onClick={() => setWorkflow(item)}>
+              <span>{workflowLabels[item]}</span>
+              <small>{workflowDescriptions[item]}</small>
             </button>
           ))}
         </nav>
@@ -1145,14 +1170,14 @@ const App: React.FC = () => {
         <section className="ic-progress-strip" aria-label="Project progress">
           {[
             workflow === 'mood' ? 'References' : 'Room',
-            workflow === 'mood' ? 'Direction' : 'Products',
-            'Arrange',
+            workflow === 'design' ? 'Products' : workflow === 'stage' ? 'References' : 'Direction',
+            workflow === 'design' ? 'Arrange' : 'Refine',
             'Create',
           ].map((step, index) => {
             const complete = index === 0
               ? (workflow === 'mood' ? moodProducts.length > 0 : !!sceneImage)
               : index === 1
-                ? (workflow === 'mood' ? !!moodPrompt.trim() : activeProducts.length > 0 || editMode === 'remove')
+                ? (workflow === 'mood' ? !!moodPrompt.trim() : workflow === 'stage' ? stagePrompt.trim() || stageProducts.length > 0 : activeProducts.length > 0 || editMode === 'remove')
                 : index === 2
                   ? workflow === 'mood' || !!sceneImage
                   : hasGenerated;
@@ -1172,7 +1197,7 @@ const App: React.FC = () => {
           </div>
           {workflow !== 'mood' && (
             <div className="ic-flow-step">
-              {renderProductLibrary('place')}
+              {renderProductLibrary(workflow === 'stage' ? 'stage' : 'place')}
             </div>
           )}
           <div className="ic-flow-step">
