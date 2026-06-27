@@ -2169,6 +2169,36 @@ img {
   width: 100%;
 }
 
+/* Shared carousel sizing lock: room and product rails should feel like one system. */
+.ic-room-library-section .ic-asset-grid,
+.ic-product-library-section .ic-asset-grid {
+  gap: clamp(8px, 0.9vw, 12px);
+}
+
+.ic-room-library-section .ic-asset-tile,
+.ic-product-library-section .ic-asset-tile {
+  flex: 0 0 clamp(104px, 9vw, 142px);
+}
+
+.ic-room-library-section .ic-asset-tile img,
+.ic-room-library-section .ic-asset-tile > div,
+.ic-room-library-section .ic-upload-box,
+.ic-product-library-section .ic-asset-tile img,
+.ic-product-library-section .ic-asset-tile > div,
+.ic-product-library-section .ic-upload-box {
+  aspect-ratio: 4 / 3;
+}
+
+.ic-room-library-section .ic-asset-tile img {
+  object-fit: cover;
+  padding: 0;
+}
+
+.ic-product-library-section .ic-asset-tile img {
+  object-fit: contain;
+  padding: 8px;
+}
+
 @media (max-width: 640px) {
   .ic-hero-compact h1 {
     white-space: normal;
@@ -2178,5 +2208,19 @@ img {
   .ic-workflow-switcher,
   .ic-progress-strip {
     width: 100%;
+  }
+
+  .ic-room-library-section .ic-asset-tile,
+  .ic-product-library-section .ic-asset-tile {
+    flex-basis: calc(100% - 34px);
+  }
+
+  .ic-room-library-section .ic-asset-tile img,
+  .ic-room-library-section .ic-asset-tile > div,
+  .ic-room-library-section .ic-upload-box,
+  .ic-product-library-section .ic-asset-tile img,
+  .ic-product-library-section .ic-asset-tile > div,
+  .ic-product-library-section .ic-upload-box {
+    aspect-ratio: 4 / 3;
   }
 }
