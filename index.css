@@ -2163,8 +2163,6 @@ img {
   margin-inline: 0 auto;
 }
 
-.ic-workflow-switcher,
-.ic-progress-strip,
 .ic-asset-grid,
 .ic-chip-row,
 .ic-inline-actions,
@@ -2206,16 +2204,18 @@ img {
 
 .ic-progress-strip {
   max-width: 760px;
+  margin-inline: auto;
+  justify-content: center !important;
 }
 
 .ic-progress-strip div {
-  justify-items: start;
-  text-align: left;
+  justify-items: center;
+  text-align: center;
 }
 
 .ic-progress-strip div:not(:last-child)::after {
-  left: 24px;
-  width: calc(100% - 24px);
+  left: calc(50% + 16px);
+  width: calc(100% - 32px);
 }
 
 .ic-asset-tile {
@@ -2281,4 +2281,21 @@ img {
   .ic-product-library-section .ic-upload-box {
     aspect-ratio: 4 / 3;
   }
+}
+
+/* Centered masthead lock: keep the opening brand, modes, and steps composed as one premium block. */
+.ic-hero-compact {
+  margin-inline: auto;
+  text-align: center;
+  justify-items: center;
+}
+
+.ic-workflow-switcher {
+  margin-inline: auto;
+  justify-content: center !important;
+}
+
+.ic-progress-strip {
+  margin-inline: auto;
+  justify-content: center !important;
 }
