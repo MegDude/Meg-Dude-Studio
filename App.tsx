@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Heart, Menu, Ruler, Sparkles, X } from 'lucide-react';
 import { PRODUCT_LIBRARY, ProductLibraryItem } from './src/data/productLibrary';
-import { generateMoodboard, generateMultiCompositeImage, stageRoomImage } from './src/services/openaiService';
+import { generateMoodboard, generateMultiCompositeImage, stageRoomImage, suggestEditPrompts } from './src/services/openaiService';
 import { Product } from './types';
 import ImageUploader from './components/ImageUploader';
 import TouchGhost from './components/TouchGhost';
@@ -107,6 +107,33 @@ const workflowDescriptions: Record<Workflow, string> = {
   design: 'Exact products',
   stage: 'Full room',
   mood: 'Direction board',
+};
+
+const FALLBACK_PROMPT_SUGGESTIONS: Record<Workflow, string[]> = {
+  design: [
+    'Layer warm linen, quiet wood, and restrained sculptural accents.',
+    'Create a tailored editorial room with soft contrast and balanced negative space.',
+    'Add polished residential styling with natural materials and believable shadows.',
+    'Compose a calm luxury interior with proportionate pieces and airy spacing.',
+    'Use refined neutrals, subtle brass, and gallery-level styling.',
+    'Make the room feel finished, grounded, and photograph-ready.',
+  ],
+  stage: [
+    'Stage the room with warm minimal furniture, layered textiles, and natural light.',
+    'Create a listing-ready interior with generous circulation and soft architectural polish.',
+    'Add refined furniture, art, greenery, and a calm neutral material palette.',
+    'Keep the architecture clear while adding elegant residential warmth.',
+    'Use quiet luxury staging with accurate scale, shadows, and balanced composition.',
+    'Style the full room with editorial restraint and believable lived-in detail.',
+  ],
+  mood: [
+    'Warm minimal moodboard with linen, stone, walnut, and soft brass accents.',
+    'Quiet luxury palette with tactile neutrals, sculptural lighting, and natural texture.',
+    'Editorial interior direction with refined woods, creamy textiles, and black accents.',
+    'Calm residential concept with layered materials and a sophisticated tonal palette.',
+    'Modern organic board with stone, oak, bouclé, greenery, and subtle contrast.',
+    'High-end design language with balanced swatches, furniture forms, and atmospheric warmth.',
+  ],
 };
 
 const friendlyIssueMessage = (fallback: string) => (error: unknown): string => {
@@ -250,6 +277,9 @@ const App: React.FC = () => {
   const [agentStatus, setAgentStatus] = useState<AgentStatus | null>(null);
   const [agentStatusError, setAgentStatusError] = useState<string | null>(null);
   const [debugPrompt, setDebugPrompt] = useState<string | null>(null);
+  const [promptSuggestions, setPromptSuggestions] = useState<string[]>(FALLBACK_PROMPT_SUGGESTIONS.design);
+  const [promptSuggestionIndex, setPromptSuggestionIndex] = useState(0);
+  const [isPromptSuggesting, setIsPromptSuggesting] = useState(false);
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [isMeasureMode, setIsMeasureMode] = useState(false);
   const [isTouchDragging, setIsTouchDragging] = useState(false);
@@ -267,6 +297,25 @@ const App: React.FC = () => {
   const generatedImageUrl = workflow === 'mood' ? moodboardImageUrl : sceneImageUrl;
   const hasGenerated = !!debugPrompt || !!moodboardImageUrl;
   const isAgentReady = agentStatus?.configured === true;
+  const activeSuggestionFallbacks = useMemo(() => FALLBACK_PROMPT_SUGGESTIONS[workflow], [workflow]);
+  const activePromptText = workflow === 'mood'
+    ? moodPrompt
+    : workflow === 'stage'
+      ? stagePrompt
+      : editMode === 'remove'
+        ? removePrompt
+        : designBrief;
+  const activeProductNames = useMemo(() => activeProducts.map((item) => item.name), [activeProducts]);
+  const stageReferenceNames = useMemo(() => stageProducts.map((item) => item.name), [stageProducts]);
+  const moodReferenceNames = useMemo(() => moodProducts.map((item) => item.name), [moodProducts]);
+  const promptSuggestionContextKey = [
+    workflow,
+    editMode,
+    selectedRoom?.name || '',
+    activeProductNames.join('|'),
+    stageReferenceNames.join('|'),
+    moodReferenceNames.join('|'),
+  ].join('::');
   const lightingModeLabel = lightingTemperature > 8 ? 'warm' : lightingTemperature < -8 ? 'cool' : 'neutral';
   const sceneLightFilter = useMemo(() => {
     const temperature = Math.max(-40, Math.min(40, lightingTemperature));
@@ -480,6 +529,45 @@ const App: React.FC = () => {
     setLightingTemperature(10);
     setStatus('Lighting matched to products.');
   }, [activeProducts.length, selectedProductFile]);
+
+  const applyPromptSuggestion = useCallback((suggestion: string) => {
+    if (workflow === 'mood') {
+      setMoodPrompt(suggestion);
+    } else if (workflow === 'stage') {
+      setStagePrompt(suggestion);
+    } else if (editMode === 'remove') {
+      setRemovePrompt(suggestion);
+    } else {
+      setDesignBrief(suggestion);
+    }
+    setStatus('Prompt applied');
+  }, [editMode, workflow]);
+
+  const refreshPromptSuggestions = useCallback(async () => {
+    setPromptSuggestionIndex(0);
+    setPromptSuggestions(activeSuggestionFallbacks);
+
+    if (!isAgentReady) return;
+
+    setIsPromptSuggesting(true);
+    try {
+      const nextSuggestions = await suggestEditPrompts({
+        workflow,
+        editMode,
+        currentPrompt: activePromptText,
+        roomName: selectedRoom?.name,
+        productNames: activeProductNames,
+        referenceNames: workflow === 'stage' ? stageReferenceNames : moodReferenceNames,
+      });
+      if (nextSuggestions.length > 0) {
+        setPromptSuggestions(nextSuggestions);
+      }
+    } catch {
+      setPromptSuggestions(activeSuggestionFallbacks);
+    } finally {
+      setIsPromptSuggesting(false);
+    }
+  }, [activeProductNames, activePromptText, activeSuggestionFallbacks, editMode, isAgentReady, moodReferenceNames, selectedRoom?.name, stageReferenceNames, workflow]);
 
   const saveProject = useCallback(async () => {
     try {
@@ -756,6 +844,19 @@ const App: React.FC = () => {
   }, [refreshAgentStatus]);
 
   useEffect(() => {
+    refreshPromptSuggestions();
+    // Suggestions should refresh when the workspace context changes, not on every typed character.
+  }, [promptSuggestionContextKey, isAgentReady]);
+
+  useEffect(() => {
+    if (promptSuggestions.length <= 1) return undefined;
+    const interval = window.setInterval(() => {
+      setPromptSuggestionIndex((index) => (index + 1) % promptSuggestions.length);
+    }, 3600);
+    return () => window.clearInterval(interval);
+  }, [promptSuggestions.length]);
+
+  useEffect(() => {
     const onError = (event: ErrorEvent) => {
       setError(friendlyIssueMessage('The studio paused for a moment. Refresh or try again.')(event.error || event.message));
       setIsLoading(false);
@@ -1026,6 +1127,36 @@ const App: React.FC = () => {
     </section>
   );
 
+  const renderPromptSuggestions = () => (
+    <div className="ic-prompt-suggester" aria-label="Prompt suggestions">
+      <div className="ic-prompt-suggester-header">
+        <span>Prompt ideas</span>
+        <button type="button" onClick={refreshPromptSuggestions} disabled={isPromptSuggesting}>
+          {isPromptSuggesting ? 'Thinking' : 'Refresh'}
+        </button>
+      </div>
+      <div className="ic-prompt-suggestion-window">
+        <div
+          className="ic-prompt-suggestion-track"
+          style={{ transform: `translateX(-${promptSuggestionIndex * 100}%)` }}
+        >
+          {promptSuggestions.map((suggestion) => (
+            <button key={suggestion} type="button" onClick={() => applyPromptSuggestion(suggestion)}>
+              {suggestion}
+            </button>
+          ))}
+        </div>
+      </div>
+      {promptSuggestions.length > 1 && (
+        <div className="ic-prompt-suggestion-dots" aria-hidden="true">
+          {promptSuggestions.map((suggestion, index) => (
+            <span key={suggestion} className={index === promptSuggestionIndex ? 'is-active' : ''} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   const renderEditorControls = () => (
     <section className="ic-controls-panel">
       <div className="ic-section-heading">
@@ -1049,12 +1180,16 @@ const App: React.FC = () => {
             <button type="button" className={editMode === 'remove' ? 'is-active' : ''} onClick={() => setEditMode('remove')}>Remove</button>
           </div>
           {editMode === 'add' && (
-            <textarea value={designBrief} onChange={(event) => setDesignBrief(event.target.value)} placeholder="Design direction" />
+            <>
+              <textarea value={designBrief} onChange={(event) => setDesignBrief(event.target.value)} placeholder="Design direction" />
+              {renderPromptSuggestions()}
+            </>
           )}
           {editMode === 'remove' && (
             <>
               <p className="ic-small-note">Tap the item, then generate.</p>
               <textarea value={removePrompt} onChange={(event) => setRemovePrompt(event.target.value)} placeholder="Item to remove" />
+              {renderPromptSuggestions()}
             </>
           )}
         </>
@@ -1062,6 +1197,7 @@ const App: React.FC = () => {
       {workflow === 'stage' && (
         <>
           <textarea value={stagePrompt} onChange={(event) => setStagePrompt(event.target.value)} placeholder="Staging direction" />
+          {renderPromptSuggestions()}
           <input value={keepPrompt} onChange={(event) => setKeepPrompt(event.target.value)} placeholder="Keep" />
           <input value={stageRemovePrompt} onChange={(event) => setStageRemovePrompt(event.target.value)} placeholder="Remove" />
           <p className="ic-small-note">{stageProducts.length} references selected</p>
@@ -1070,6 +1206,7 @@ const App: React.FC = () => {
       {workflow === 'mood' && (
         <>
           <textarea value={moodPrompt} onChange={(event) => setMoodPrompt(event.target.value)} placeholder="Mood direction" />
+          {renderPromptSuggestions()}
           <p className="ic-small-note">{moodProducts.length} selected</p>
         </>
       )}

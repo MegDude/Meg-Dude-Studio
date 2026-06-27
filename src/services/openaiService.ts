@@ -26,6 +26,15 @@ type OpenAIRequestOptions = {
   maxOutputTokens?: number;
 };
 
+type PromptSuggestionInput = {
+  workflow: 'design' | 'stage' | 'mood';
+  editMode?: 'add' | 'remove';
+  currentPrompt: string;
+  roomName?: string;
+  productNames?: string[];
+  referenceNames?: string[];
+};
+
 const getOpenAIImageModel = (): string => {
   return (
     process.env.OPENAI_IMAGE_MODEL ||
@@ -249,6 +258,59 @@ const requestOpenAIText = async (prompt: string, maxOutputTokens = TEXT_TOKEN_LI
     { maxOutputTokens }
   );
   return extractOutputText(payload);
+};
+
+const parsePromptSuggestions = (text: string): string[] => {
+  const trimmed = text.trim().replace(/^```json\s*/i, '').replace(/```$/i, '').trim();
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((item): item is string => typeof item === 'string');
+    }
+  } catch {
+    // Fall back to line parsing.
+  }
+
+  return trimmed
+    .split('\n')
+    .map((line) => line.replace(/^[-*\d.\s]+/, '').trim())
+    .filter(Boolean);
+};
+
+export const suggestEditPrompts = async ({
+  workflow,
+  editMode = 'add',
+  currentPrompt,
+  roomName,
+  productNames = [],
+  referenceNames = [],
+}: PromptSuggestionInput): Promise<string[]> => {
+  const prompt = `
+You are an elite interior design prompt director for an architectural image studio.
+
+Create six concise generation prompts for the active editor.
+
+Context:
+- Mode: ${workflow}
+- Edit mode: ${editMode}
+- Room: ${roomName || 'not selected'}
+- Products: ${productNames.join(', ') || 'none selected'}
+- References: ${referenceNames.join(', ') || 'none selected'}
+- Current text: "${currentPrompt || 'empty'}"
+
+Rules:
+- Write premium, specific interior-design language.
+- Keep each suggestion under 20 words.
+- Make each suggestion directly usable in the text box.
+- Do not mention AI, tools, APIs, models, or technical process.
+- Return only a JSON array of six strings.
+`;
+
+  const text = await requestOpenAIText(prompt, 180);
+  return parsePromptSuggestions(text)
+    .map((item) => item.replace(/^["']|["']$/g, '').trim())
+    .filter(Boolean)
+    .slice(0, 6);
 };
 
 const createLocalStagedPreview = async (
